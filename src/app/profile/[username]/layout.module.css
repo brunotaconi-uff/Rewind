@@ -1,0 +1,10 @@
+.page {
+  font-family: var(--font-poppins), sans-serif;
+  color: var(--color-text);
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 16px;
+}

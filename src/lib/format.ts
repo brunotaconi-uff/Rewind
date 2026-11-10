@@ -49,3 +49,9 @@ export function formatRelativeDate(isoDate: string, now: Date = new Date()): str
   }
   return "agora";
 }
+const monthYearFormat = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+
+/** Mês e ano de uma data ISO (ex.: "outubro de 2026"), usado em "Membro desde". */
+export function formatMonthYear(isoDate: string): string {
+  return monthYearFormat.format(new Date(isoDate));
+}
