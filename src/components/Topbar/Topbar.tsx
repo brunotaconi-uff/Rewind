@@ -3,13 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import type { ComponentType } from "react";
 import { HeartIcon, HomeIcon, UserIcon } from "@/components/icons/icons";
 import { SearchBar } from "@/components/SearchBar/SearchBar";
 import styles from "./Topbar.module.css";
-
-// TODO: trocar pelo username do usuário logado quando a sessão estiver integrada ao backend.
-const CURRENT_USERNAME = "daniel";
 
 interface NavItem {
   href: string;
@@ -18,25 +16,32 @@ interface NavItem {
   isActive: (pathname: string) => boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Início", icon: HomeIcon, isActive: (pathname) => pathname === "/" },
-  {
-    href: `/profile/${CURRENT_USERNAME}/favorites`,
-    label: "Favoritos",
-    icon: HeartIcon,
-    isActive: (pathname) => pathname === `/profile/${CURRENT_USERNAME}/favorites`,
-  },
-  {
-    href: `/profile/${CURRENT_USERNAME}`,
-    label: "Perfil",
-    icon: UserIcon,
-    isActive: (pathname) =>
-      pathname.startsWith(`/profile/${CURRENT_USERNAME}`) && !pathname.endsWith("/favorites"),
-  },
-];
+/** Favoritos e Perfil apontam para o usuário logado; sem login, levam para /login. */
+function getNavItems(username: string | undefined): NavItem[] {
+  const profile = username ? `/profile/${username}` : "/login";
+  const favorites = username ? `${profile}/favorites` : "/login";
+
+  return [
+    { href: "/", label: "Início", icon: HomeIcon, isActive: (pathname) => pathname === "/" },
+    {
+      href: favorites,
+      label: "Favoritos",
+      icon: HeartIcon,
+      isActive: (pathname) => Boolean(username) && pathname === favorites,
+    },
+    {
+      href: profile,
+      label: "Perfil",
+      icon: UserIcon,
+      isActive: (pathname) =>
+        Boolean(username) && pathname.startsWith(profile) && !pathname.endsWith("/favorites"),
+    },
+  ];
+}
 
 export function Topbar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <header className={styles.topbar}>
@@ -48,11 +53,11 @@ export function Topbar() {
       <SearchBar />
 
       <nav className={styles.nav} aria-label="Navegação principal">
-        {NAV_ITEMS.map(({ href, label, icon: NavIcon, isActive }) => {
+        {getNavItems(session?.user.username).map(({ href, label, icon: NavIcon, isActive }) => {
           const active = isActive(pathname);
           return (
             <Link
-              key={href}
+              key={label}
               href={href}
               title={label}
               aria-label={label}
