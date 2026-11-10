@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useId, useState } from "react";
 import { InputField } from "@/components/InputField/InputField";
+import { AvatarUpload } from "./AvatarUpload";
 import { ApiError, getErrorCode } from "@/lib/api/client";
 import { getErrorMessage } from "@/lib/api/errorMessages";
 import { updateMyProfile, type UserProfile } from "@/lib/api/user";
@@ -64,6 +65,7 @@ export function EditProfileForm({ profile, onDone }: EditProfileFormProps) {
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
+      <AvatarUpload profile={profile} />
       <InputField label="Nome" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} required />
       <InputField
         label="Nome de usuário"

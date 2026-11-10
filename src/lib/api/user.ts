@@ -49,3 +49,16 @@ export async function updateMyProfile(token: string, input: ProfileInput): Promi
   const response = await apiRequest<DataResponse<UserProfile>>("/users/me", { method: "PATCH", body: input, token });
   return response.data;
 }
+
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+export const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+/** Envia a foto de perfil (o arquivo vai cru no corpo, com o Content-Type dele). */
+export async function uploadMyAvatar(token: string, file: File): Promise<UserProfile> {
+  const response = await apiRequest<DataResponse<UserProfile>>("/users/me/avatar", {
+    method: "PUT",
+    body: file,
+    token,
+  });
+  return response.data;
+}
