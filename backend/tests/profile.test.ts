@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { AppError } from "../src/errors/AppError";
+import { detectImageType } from "../src/services/avatar.service";
 import { parseProfileUpdate } from "../src/services/profile.validation";
 
 function assertValidationError(fn: () => unknown) {
@@ -42,5 +43,19 @@ describe("parseProfileUpdate", () => {
     assertValidationError(() => parseProfileUpdate(undefined));
     assertValidationError(() => parseProfileUpdate(["nome"]));
     assertValidationError(() => parseProfileUpdate({ bio: 42 }));
+  });
+});
+
+describe("detectImageType", () => {
+  test("reconhece JPG, PNG, WEBP e GIF pelos primeiros bytes", () => {
+    assert.equal(detectImageType(Buffer.from([0xff, 0xd8, 0xff, 0xe0])), "jpg");
+    assert.equal(detectImageType(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0])), "png");
+    assert.equal(detectImageType(Buffer.from("RIFF\0\0\0\0WEBPVP8 ", "ascii")), "webp");
+    assert.equal(detectImageType(Buffer.from("GIF89a...", "ascii")), "gif");
+  });
+
+  test("recusa arquivo que não é imagem, mesmo com Content-Type de imagem", () => {
+    assert.equal(detectImageType(Buffer.from("<script>alert(1)</script>")), null);
+    assert.equal(detectImageType(Buffer.alloc(0)), null);
   });
 });
