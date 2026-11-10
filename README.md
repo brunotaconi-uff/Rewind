@@ -42,6 +42,15 @@ Antes de começar, certifique-se de ter instalado em sua máquina:
 Acesse o projeto e rode: 
 ```npm install```
 
+Crie um arquivo .env na raiz do projeto (veja o .env.example):
+```
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET="sua-chave-secreta"
+```
+
+Para gerar as chaves secretas (NEXTAUTH_SECRET e JWT_SECRET): ```node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"```
+
 Depois inicie o servidor localmente: ```npm run dev```
 
 
