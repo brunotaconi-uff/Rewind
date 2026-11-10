@@ -36,6 +36,8 @@
   border-radius: 50%;
   background-color: #dcdcec;
   color: var(--color-text-muted);
+  border: none;
+  cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 

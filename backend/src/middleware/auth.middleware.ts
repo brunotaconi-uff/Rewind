@@ -1,46 +1,30 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { getJwtSecret } from "../config/env";
+import { AppError } from "../errors/AppError";
 
 export interface AuthRequest extends Request {
   userId?: string;
 }
 
-export function authMiddleware(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({
-      error: "Token não informado",
-    });
+export function authMiddleware(req: AuthRequest, _res: Response, next: NextFunction) {
+  const [scheme, token] = req.headers.authorization?.split(" ") ?? [];
+  
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    throw AppError.unauthorized("Token não informado.");
   }
 
-  const [, token] = authHeader.split(" ");
-
-  if (!token) {
-    return res.status(401).json({
-      error: "Token inválido",
-    });
-  }
-
+  let decoded: string | jwt.JwtPayload;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
-
-    if (typeof decoded !== "object" || !("userId" in decoded)) {
-      return res.status(401).json({
-        error: "Token inválido",
-      });
-    }
-
-    req.userId = decoded.userId as string;
-
-    next();
-  } catch (error) {
-    return res.status(401).json({
-      error: "Token inválido ou expirado",
-    });
+    decoded = jwt.verify(token, getJwtSecret());
+  } catch {
+    throw AppError.unauthorized("Sessão inválida ou expirada. Faça login novamente.");
   }
+
+  if (typeof decoded !== "object" || typeof decoded.userId !== "string") {
+    throw AppError.unauthorized("Sessão inválida. Faça login novamente.");
+  }
+
+  req.userId = decoded.userId;
+  next();
 }

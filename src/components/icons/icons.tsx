@@ -80,6 +80,16 @@ export function ReviewIcon(props: IconProps) {
   );
 }
 
+/** Porta com seta para fora: "sair". */
+export function LogoutIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M9.5 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3.5" />
+      <path d="M16 16.5 20.5 12 16 7.5M20.5 12H9.5" />
+    </Icon>
+  );
+}
+
 export function CloseIcon(props: IconProps) {
   return (
     <Icon {...props}>

@@ -1,5 +1,6 @@
 export type ErrorCode =
   | "VALIDATION_ERROR"
+  | "UNAUTHORIZED"
   | "NOT_FOUND"
   | "CONFLICT"
   | "EXTERNAL_API_RATE_LIMITED"
@@ -21,6 +22,10 @@ export class AppError extends Error {
 
   static validation(message: string): AppError {
     return new AppError("VALIDATION_ERROR", 400, message);
+  }
+
+  static unauthorized(message = "Faça login para continuar."): AppError {
+    return new AppError("UNAUTHORIZED", 401, message);
   }
 
   static notFound(message = "Recurso não encontrado."): AppError {
