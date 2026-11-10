@@ -79,7 +79,7 @@ export const loginUserService = async ({
   const expiresInSeconds = rememberMe ? REMEMBER_ME_SECONDS : DEFAULT_SESSION_SECONDS;
   const token = jwt.sign({ userId: user.id }, getJwtSecret(), { expiresIn: expiresInSeconds });
 
-  const { passwordHash: _passwordHase, ...safeUser } = user;
+  const { passwordHash: _passwordHash, ...safeUser } = user;
 
   return {
     token,

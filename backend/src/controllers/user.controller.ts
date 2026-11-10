@@ -34,139 +34,67 @@ function readEmail(body: Record<string, unknown>): string {
 }
 
 export const getAllUsers = async (_req: Request, res: Response) => {
-  try {
-    const users = await getAllUsersService();
-
-    res.json(users);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro ao buscar usuários" });
-  }
+  res.json(await getAllUsersService());
 };
 
 export const createUser = async (req: Request, res: Response) => {
-  try {
-    const {
-      name,
-      username,
-      email,
-      password,
-      bio,
-      avatarUrl,
-      city,
-      country
-    } = req.body;
+  const body = req.body ?? {};
 
-    if (!name || !username || !email || !password) {
-      return res.status(400).json({
-        error: "name, username, email e password são campos obrigatórios"
-      })
-    }
-
-    const user = await createUserService({
-        name,
-        username,
-        email,
-        password,
-        bio,
-        avatarUrl,
-        city,
-        country
-    });
-
-    return res.status(201).json(user);
-
-  } catch (error) {
-    console.error(error);
-
-    if (
-        error instanceof Error &&
-        error.message === "Usuário com esse username ou email já existe"
-    ) {
-        return res.status(400).json({
-            error: error.message
-        });
-    }
-
-    return res.status(500).json({ 
-      error: "Erro ao criar usuário"
-    });
+  const name = readString(body, "name", "nome");
+  const email = readEmail(body);
+  const username = readString(body, "username", "nome de usuário").toLowerCase();
+  if (!USERNAME_PATTERN.test(username)) {
+    throw AppError.validation(
+      "O nome de usuário deve ter de 3 a 30 caracteres: letras, números, ponto ou _.",
+    );
   }
-}
+
+  // A senha não passa por trim: espaços fazem parte dela.
+  const password = body.password;
+  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
+    throw AppError.validation(`A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+  }
+
+  const user = await createUserService({
+    name,
+    username,
+    email,
+    password,
+    bio: readOptionalString(body, "bio"),
+    avatarUrl: readOptionalString(body, "avatarUrl"),
+    city: readOptionalString(body, "city"),
+    country: readOptionalString(body, "country"),
+  });
+
+  res.status(201).json(user);
+};
 
 export const login = async (req: Request, res: Response) => {
-  try {
-    const { email, password, rememberMe } = req.body;
+  const body = req.body ?? {};
 
-    if (!email || !password) {
-      return res.status(400).json({
-        error: "email e password são campos obrigatórios",
-      });
-    }
-
-    const result = await loginUserService({
-      email,
-      password,
-      rememberMe,
-    });
-
-    return res.status(200).json(result);
-  } catch (error) {
-    console.error(error);
-
-    if (
-      error instanceof Error &&
-      error.message === "Credenciais inválidas"
-    ) {
-      return res.status(401).json({
-        error: "Credenciais inválidas",
-      });
-    }
-
-    return res.status(500).json({
-      error: "Erro ao realizar login",
-    });
+  const email = readEmail(body);
+  const password = body.password;
+  if (typeof password !== "string" || password === "") {
+    throw AppError.validation("O campo senha é obrigatório.");
   }
+
+  const result = await loginUserService({
+    email,
+    password,
+    rememberMe: body.rememberMe === true,
+  });
+
+  res.status(200).json(result);
 };
 
 export const getMe = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.userId;
+  // O authMiddleware garante o userId; a checagem é só para o TypeScript.
+  if (!req.userId) throw AppError.unauthorized();
 
-    if (!userId) {
-      return res.status(401).json({
-        error: "Usuário não autenticado",
-      });
-    }
-
-    const user = await getUserByIdService(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        error: "Usuário não encontrado",
-      });
-    }
-
-    return res.status(200).json(user);
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      error: "Erro ao buscar informações do usuário",
-    });
-  }
+  res.status(200).json(await getUserByIdService(req.userId));
 };
 
+// O JWT não fica guardado no servidor: o logout acontece no front, que descarta o token.
 export const logout = async (_req: Request, res: Response) => {
-  try {
-    return res.status(200).json({
-      message: "Logout realizado com sucesso"
-    });
-  } catch (error) {
-    console.error(error);
-    
-    return res.status(500).json({
-      error: "Erro ao realizar logout"
-    });
-  }
-};  
+  res.status(200).json({ message: "Logout realizado com sucesso" });
+};
