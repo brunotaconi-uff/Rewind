@@ -5,7 +5,7 @@ import type { ExternalAlbumSummary, MusicProvider } from "./music/music.types";
 
 // Álbum resumido igual ao das rotas de música (ExternalAlbumSummary),
 // para o front reaproveitar os mesmos componentes de card.
-const albumSummarySelect = {
+export const albumSummarySelect = {
   externalId: true,
   title: true,
   coverUrl: true,

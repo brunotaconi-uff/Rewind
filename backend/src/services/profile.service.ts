@@ -1,5 +1,6 @@
 import { AppError } from "../errors/AppError";
 import { prisma } from "../lib/prisma";
+import { albumSummarySelect, toAlbumSummary } from "./favorite.service";
 import type { ProfileUpdate } from "./profile.validation";
 
 // Dados públicos do perfil: nunca inclui email nem senha.
@@ -76,4 +77,34 @@ export const updateProfileService = async (userId: string, update: ProfileUpdate
   }
 
   return getProfileByIdService(userId);
+};
+
+export const FEED_DEFAULT_LIMIT = 30;
+export const FEED_MAX_LIMIT = 100;
+
+/** 5.2-B5: notas e resenhas do usuário, das mais recentes para as mais antigas. */
+export const getUserFeedService = async (username: string, limit = FEED_DEFAULT_LIMIT) => {
+  const user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+  if (!user) throw AppError.notFound("Usuário não encontrado.");
+
+  const reviews = await prisma.review.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      rating: true,
+      content: true,
+      createdAt: true,
+      album: { select: albumSummarySelect },
+    },
+  });
+
+  return reviews.map((review) => ({
+    ...review,
+    rating: Number(review.rating),
+    // Avaliação só com nota fica com content null (texto vazio também conta como sem resenha).
+    content: review.content?.trim() ? review.content : null,
+    album: toAlbumSummary(review.album),
+  }));
 };

@@ -7,7 +7,7 @@ import {
   getMe,
   logout
 } from "../controllers/user.controller";
-import { getProfile, updateMyProfile, uploadMyAvatar } from "../controllers/profile.controller";
+import { getFeed, getProfile, updateMyProfile, uploadMyAvatar } from "../controllers/profile.controller";
 import { addFavorite, listFavorites, removeFavorite } from "../controllers/favorite.controller";
 import { MAX_AVATAR_BYTES } from "../services/avatar.service";
 
@@ -36,5 +36,6 @@ router.delete("/me/favorites/:albumId", authMiddleware, removeFavorite);
 // Perfil público. Fica depois de /me para não capturar essa rota.
 router.get("/:username", getProfile);
 router.get("/:username/favorites", listFavorites);
+router.get("/:username/feed", getFeed);
 
 export default router;
