@@ -1,11 +1,31 @@
-export default function FavoritesTab() {
-  return (
-    <div className="bg-white rounded-lg p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-zinc-900 mb-4">Reviews</h2>
-      <div className="grid grid-cols-4 gap-4">
-        <div className="aspect-square bg-zinc-200 rounded">Review 1</div>
-        <div className="aspect-square bg-zinc-200 rounded">Review 2</div>
-      </div>
-    </div>
-  );
+import { ApiErrorMessage } from "@/components/ApiErrorMessage/ApiErrorMessage";
+import { ProfileFeed } from "@/components/ProfileFeed/ProfileFeed";
+import { EmptyState } from "@/components/Section/Section";
+import { getErrorCode } from "@/lib/api/client";
+import { getUserFeed, type FeedItem } from "@/lib/api/user";
+
+// A rota do feed aceita no máximo 100 itens; aqui só ficam os que têm texto.
+const FEED_LIMIT = 100;
+
+interface ReviewsTabProps {
+  params: Promise<{
+    username: string;
+  }>;
+}
+
+export default async function ReviewsTab({ params }: ReviewsTabProps) {
+  const username = decodeURIComponent((await params).username);
+
+  let items: FeedItem[];
+  try {
+    items = await getUserFeed(username, FEED_LIMIT);
+  } catch (error) {
+    return <ApiErrorMessage code={getErrorCode(error)} title="Não foi possível carregar as resenhas" />;
+  }
+
+  const reviews = items.filter((item) => item.content !== null);
+  if (reviews.length === 0) {
+    return <EmptyState>@{username} ainda não escreveu nenhuma resenha.</EmptyState>;
+  }
+  return <ProfileFeed items={reviews} />;
 }

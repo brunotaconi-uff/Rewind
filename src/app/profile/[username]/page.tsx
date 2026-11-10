@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ApiErrorMessage } from "@/components/ApiErrorMessage/ApiErrorMessage";
 import { FavoriteAlbums } from "@/components/Favorites/FavoriteAlbums";
+import { ProfileFeed } from "@/components/ProfileFeed/ProfileFeed";
 import { EmptyState, Section } from "@/components/Section/Section";
 import { getErrorCode } from "@/lib/api/client";
-import { getUserFavorites } from "@/lib/api/user";
+import { getUserFavorites, getUserFeed } from "@/lib/api/user";
 import styles from "./page.module.css";
 
 // Uma linha do grid de álbuns; o resto fica na aba Favoritos.
@@ -39,12 +40,31 @@ async function FavoritesHighlight({ username }: { username: string }) {
   );
 }
 
+async function RecentActivity({ username }: { username: string }) {
+  let items;
+  try {
+    items = await getUserFeed(username);
+  } catch (error) {
+    return <ApiErrorMessage code={getErrorCode(error)} title="Não foi possível carregar a atividade" />;
+  }
+
+  if (items.length === 0) {
+    return <EmptyState>@{username} ainda não avaliou nenhum álbum.</EmptyState>;
+  }
+  return <ProfileFeed items={items} />;
+}
+
 export default async function RootProfilePage({ params }: RootProfilePageProps) {
   const username = decodeURIComponent((await params).username);
 
   return (
-    <Section title="Favoritos">
-      <FavoritesHighlight username={username} />
-    </Section>
+    <>
+      <Section title="Favoritos">
+        <FavoritesHighlight username={username} />
+      </Section>
+      <Section title="Atividade recente">
+        <RecentActivity username={username} />
+      </Section>
+    </>
   );
 }

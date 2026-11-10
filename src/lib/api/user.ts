@@ -83,3 +83,21 @@ export async function addFavorite(token: string, albumId: string): Promise<Album
 export async function removeFavorite(token: string, albumId: string): Promise<void> {
   await apiRequest<null>(`/users/me/favorites/${encodeURIComponent(albumId)}`, { method: "DELETE", token });
 }
+
+/** Nota ou resenha do usuário, como a rota /users/:username/feed devolve. */
+export interface FeedItem {
+  id: string;
+  rating: number;
+  /** null = só nota, sem resenha. */
+  content: string | null;
+  /** Data ISO. */
+  createdAt: string;
+  album: AlbumSummary;
+}
+
+/** Notas e resenhas do usuário, das mais recentes para as mais antigas. */
+export async function getUserFeed(username: string, limit?: number): Promise<FeedItem[]> {
+  const query = limit ? `?limit=${limit}` : "";
+  const response = await apiGet<DataResponse<FeedItem[]>>(`${userPath(username)}/feed${query}`);
+  return response.data;
+}
