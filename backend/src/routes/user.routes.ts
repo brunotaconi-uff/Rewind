@@ -7,6 +7,7 @@ import {
   getMe,
   logout
 } from "../controllers/user.controller";
+import { getProfile } from "../controllers/profile.controller";
 
 const router = Router();
 
@@ -16,5 +17,8 @@ router.get("/me", authMiddleware, getMe);
 router.post("/", createUser);
 router.post("/login", login);
 router.post("/logout", authMiddleware, logout);
+
+// Perfil público. Fica depois de /me para não capturar essa rota.
+router.get("/:username", getProfile);
 
 export default router;
