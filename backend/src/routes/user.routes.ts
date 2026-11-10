@@ -8,6 +8,7 @@ import {
   logout
 } from "../controllers/user.controller";
 import { getProfile, updateMyProfile, uploadMyAvatar } from "../controllers/profile.controller";
+import { addFavorite, listFavorites, removeFavorite } from "../controllers/favorite.controller";
 import { MAX_AVATAR_BYTES } from "../services/avatar.service";
 
 const router = Router();
@@ -28,7 +29,12 @@ router.put(
   uploadMyAvatar
 );
 
+// albumId é o externalId do álbum na API de música.
+router.post("/me/favorites", authMiddleware, addFavorite);
+router.delete("/me/favorites/:albumId", authMiddleware, removeFavorite);
+
 // Perfil público. Fica depois de /me para não capturar essa rota.
 router.get("/:username", getProfile);
+router.get("/:username/favorites", listFavorites);
 
 export default router;

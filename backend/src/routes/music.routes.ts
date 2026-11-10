@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { AppError } from "../errors/AppError";
-import { createMusicProvider } from "../services/music/music.provider";
+import { getMusicProvider } from "../services/music/music.provider";
 import type { MusicProvider } from "../services/music/music.types";
 
 const MAX_LIMIT = 50;
@@ -58,4 +58,4 @@ export function createMusicRouter(provider: MusicProvider): Router {
   return router;
 }
 
-export default createMusicRouter(createMusicProvider());
+export default createMusicRouter(getMusicProvider());
