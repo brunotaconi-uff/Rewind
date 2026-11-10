@@ -11,6 +11,14 @@ function readNumber(name: string, fallback: number, min: number): number {
   return value;
 }
 
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("Variável de ambiente JWT_SECRET não definida.");
+  }
+  return secret;
+}
+
 export const env = {
   /** Qual provider de música usar. Ver services/music/music.provider.ts. */
   musicProvider: process.env.MUSIC_PROVIDER || "deezer",
