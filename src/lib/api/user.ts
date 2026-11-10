@@ -1,4 +1,5 @@
 import { apiGet, apiRequest } from "./client";
+import type { AlbumSummary } from "./music";
 
 // Espelha o formato das rotas de perfil do backend (docs/api-perfil.md).
 
@@ -61,4 +62,24 @@ export async function uploadMyAvatar(token: string, file: File): Promise<UserPro
     token,
   });
   return response.data;
+}
+
+/** Favoritos do usuário, os adicionados por último primeiro. */
+export async function getUserFavorites(username: string): Promise<AlbumSummary[]> {
+  const response = await apiGet<DataResponse<AlbumSummary[]>>(`${userPath(username)}/favorites`);
+  return response.data;
+}
+
+/** albumId é o externalId do álbum (o mesmo das rotas de música). */
+export async function addFavorite(token: string, albumId: string): Promise<AlbumSummary> {
+  const response = await apiRequest<DataResponse<AlbumSummary>>("/users/me/favorites", {
+    method: "POST",
+    body: { albumId },
+    token,
+  });
+  return response.data;
+}
+
+export async function removeFavorite(token: string, albumId: string): Promise<void> {
+  await apiRequest<null>(`/users/me/favorites/${encodeURIComponent(albumId)}`, { method: "DELETE", token });
 }

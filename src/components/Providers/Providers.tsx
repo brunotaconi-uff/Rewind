@@ -1,8 +1,13 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
+import { FavoritesProvider } from "@/components/Favorites/FavoritesProvider";
 
-/** Contextos de cliente usados no app inteiro (por enquanto, só a sessão do NextAuth). */
+/** Contextos de cliente usados no app inteiro: sessão do NextAuth e favoritos do usuário logado. */
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  return (
+    <SessionProvider>
+      <FavoritesProvider>{children}</FavoritesProvider>
+    </SessionProvider>
+  );
 }

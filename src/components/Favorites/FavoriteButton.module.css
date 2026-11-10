@@ -1,0 +1,40 @@
+/* Mesmo formato do ReviewButton, logo abaixo dele no RatingCard. */
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--color-input);
+  color: var(--color-text-muted);
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.button:hover {
+  background-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-text-muted);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  cursor: default;
+}
+
+.active,
+.active:hover {
+  color: var(--color-favorite);
+}
+
+.active svg {
+  fill: currentColor;
+}
