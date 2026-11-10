@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import { AppShell } from "@/components/AppShell/AppShell";
+import { AuthProvider } from "@/components/AuthProvider/AuthProvider";
 import "./globals.css";
 
 interface RootLayoutProps {
@@ -27,7 +28,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="pt-BR" className={`${inter.variable} ${poppins.variable}`}>
       <body className={inter.className}>
-        <AppShell>{children}</AppShell>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );
