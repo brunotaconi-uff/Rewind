@@ -6,28 +6,41 @@ import { useRouter } from "next/navigation";
 import { InputField } from "../../../components/InputField/InputField";
 import styles from "./page.module.css";
 
+function loginErrorMessage(error: string): string {
+  return error === "CredentialsSignin" 
+    ? "E-mail ou senha incorretos." 
+    : "Ocorreu um erro ao tentar fazer login. Tente novamente.";
+}
+
 const LoginPage = () => {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro("");
+    setSucesso(true);
 
     const result = await signIn("credentials", {
       email,
       password,
+      rememberMe: String(rememberMe),
       redirect: false,
     });
 
     if (result?.error) {
-      setErro("E-mail ou senha incorretos.");
-    } else {
-      // aq dps eu vou colocar pra qual pagina tem q redirecionar qnd o login eh feito
-      router.push("/");
-    }
+      setErro(loginErrorMessage(result.error));
+      setSucesso(false);
+      return;
+    } 
+
+    router.push("/");
+    router.refresh();
+
   };
 
   return (
@@ -54,7 +67,7 @@ const LoginPage = () => {
           required
         />
         {erro && (
-          <p style={{ color: "red", fontSize: "14px", marginBottom: "16px" }}>
+          <p role="alert" style={{ color: "red", fontSize: "14px", marginBottom: "16px" }}>
             {erro}
           </p>
         )}
@@ -63,13 +76,15 @@ const LoginPage = () => {
             type="checkbox"
             id="manter-conectado"
             className={styles.checkbox}
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
           />
           <label htmlFor="manter-conectado" className={styles.checkboxLabel}>
             Manter conectado
           </label>
         </div>
-        <button type="submit" className={styles.submitButton}>
-          Entrar
+        <button type="submit" className={styles.submitButton} disabled={sucesso}>
+          {sucesso ? "Entrando..." : "Entrar"}
         </button>
       </form>
       <div className={styles.footer}>
