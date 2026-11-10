@@ -1,136 +1,102 @@
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { getJwtSecret } from "../config/env";
+import { AppError } from "../errors/AppError";
+
+const REMEMBER_ME_SECONDS = 30 * 24 * 60 * 60; // 30 dias
+const DEFAULT_SESSION_SECONDS = 24 * 60 * 60; // 1 dia
+
+const publicUserSelect = {
+	id: true,
+	name: true,
+	username: true,
+	bio: true,
+	avatarUrl: true,
+	createdAt: true,
+} as const;
+
+const ownUserSelect = {
+	...publicUserSelect,
+	email: true,
+	city: true,
+	country: true,
+} as const;
 
 export const getAllUsersService = async () => {
-    return await prisma.user.findMany();
+	return await prisma.user.findMany({ select: publicUserSelect });
 };
 
+export const createUserService = async (userData: {
+	name: string;
+	username: string;
+	email: string;
+	password: string;
+	bio?: string;
+	avatarUrl?: string;
+	city?: string;
+	country?: string;
+}) => {
+	const { name, username, email, password, bio, avatarUrl, city, country } =
+		userData;
 
-export const createUserService = async (
-    userData: {
-        name: string;
-        username: string;
-        email: string;
-        password: string;
-        bio?: string;
-        avatarUrl?: string;
-        city?: string;
-        country?: string;
-    }) => {
-    const { name, username, email, password, bio, avatarUrl, city, country } = userData;
+	const existingUser = await prisma.user.findFirst({
+		where: { OR: [{ username }, { email }] },
+    select: { username: true, email: true },
+	});
 
-    const existingUser = await prisma.user.findFirst({
-        where: {
-        OR: [
-            { username },
-            { email }
-        ]
-        }
-    });
+	if (existingUser) {
+		throw AppError.conflict(
+      existingUser.email === email
+       ? "Já existe um usuário cadastrado com este e-mail."
+       : "Já existe um usuário cadastrado com este username.",
+    );
+	}
 
-    if (existingUser) {
-        throw new Error("Usuário com esse username ou email já existe");
-    }
+	const passwordHash = await bcrypt.hash(password, 10);
 
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-        data: {
-            name,
-            username,
-            email,
-            passwordHash,
-            bio,
-            avatarUrl,
-            city,
-            country
-        }
-    });
-
-    return {
-        id: user.id,
-        name: user.name,
-        username: user.username,
-        email: user.email,
-        bio: user.bio,
-        avatarUrl: user.avatarUrl,
-        city: user.city,
-        country: user.country,
-        createdAt: user.createdAt
-    };
+  return await prisma.user.create({
+    data: { name, username, email, passwordHash, bio, avatarUrl, city, country },
+    select: ownUserSelect,
+  });
 };
 
 export const loginUserService = async ({
-  email,
-  password,
-  rememberMe,
+	email,
+	password,
+	rememberMe,
 }: {
-  email: string;
-  password: string;
-  rememberMe?: boolean;
+	email: string;
+	password: string;
+	rememberMe?: boolean;
 }) => {
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+	const user = await prisma.user.findUnique({ where: { email }, });
 
-  if (!user) {
-    throw new Error("Credenciais inválidas");
-  }
+	if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+		throw AppError.unauthorized("E-mail ou senha incorretos.");
+	}
 
-  const isPasswordValid = await bcrypt.compare(
-    password,
-    user.passwordHash
-  );
+  const expiresInSeconds = rememberMe ? REMEMBER_ME_SECONDS : DEFAULT_SESSION_SECONDS;
+  const token = jwt.sign({ userId: user.id }, getJwtSecret(), { expiresIn: expiresInSeconds });
 
-  if (!isPasswordValid) {
-    throw new Error("Credenciais inválidas");
-  }
-
-  const token = jwt.sign(
-    { userId: user.id },
-    process.env.JWT_SECRET!,
-    {
-      expiresIn: rememberMe ? "30d" : "1d",
-    }
-  );
+  const { passwordHash: _passwordHase, ...safeUser } = user;
 
   return {
     token,
-    user: {
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      bio: user.bio,
-      avatarUrl: user.avatarUrl,
-      city: user.city,
-      country: user.country,
-      createdAt: user.createdAt,
-    },
+    expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
+    user: safeUser,
   };
 };
 
 export const getUserByIdService = async (userId: string) => {
-  const user = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
-  });
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+    select: ownUserSelect,
+	});
 
-  if (!user) {
-    throw new Error("Usuário não encontrado");
-  }
+	if (!user) {
+		throw AppError.notFound("Usuário não encontrado");
+	}
 
-  return {
-    id: user.id,
-    name: user.name,
-    username: user.username,
-    email: user.email,
-    bio: user.bio,
-    avatarUrl: user.avatarUrl,
-    city: user.city,
-    country: user.country,
-    createdAt: user.createdAt,
-  };
+	return user;
 };

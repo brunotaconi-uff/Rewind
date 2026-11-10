@@ -1,6 +1,8 @@
 export type ErrorCode =
   | "VALIDATION_ERROR"
+  | "UNAUTHORIZED"
   | "NOT_FOUND"
+  | "CONFLICT"
   | "EXTERNAL_API_RATE_LIMITED"
   | "EXTERNAL_API_UNAVAILABLE"
   | "EXTERNAL_API_TIMEOUT"
@@ -22,8 +24,16 @@ export class AppError extends Error {
     return new AppError("VALIDATION_ERROR", 400, message);
   }
 
+  static unauthorized(message = "Faça login para continuar."): AppError {
+    return new AppError("UNAUTHORIZED", 401, message);
+  }
+
   static notFound(message = "Recurso não encontrado."): AppError {
     return new AppError("NOT_FOUND", 404, message);
+  }
+
+  static conflict(message: string): AppError {
+    return new AppError("CONFLICT", 409, message);
   }
 }
 

@@ -4,6 +4,9 @@ import userRoutes from "./routes/user.routes";
 import albumRoutes from "./routes/album.routes";
 import musicRoutes from "./routes/music.routes";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
+import { getJwtSecret } from "./config/env";
+
+getJwtSecret();
 
 const app = express();
 

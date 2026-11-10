@@ -1,11 +1,37 @@
 import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
+import { AppError } from "../errors/AppError";
 import { 
     getAllUsersService, 
     createUserService, 
     loginUserService,
     getUserByIdService
 } from "../services/user.service";
+
+const MIN_PASSWORD_LENGTH = 6;
+const USERNAME_PATTERN = /^[a-zA-Z0-9_.]{3,30}$/; 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function readString(body: Record<string, unknown>, field: string, label: string): string {
+  const value = body[field];
+  if (typeof value !== "string" || value.trim() === "") {
+    throw AppError.validation(`O campo ${label} é obrigatório.`);
+  }
+  return value.trim();
+}
+
+function readOptionalString(body: Record<string, unknown>, field: string): string | undefined {
+  const value = body[field];
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
+}
+
+function readEmail(body: Record<string, unknown>): string {
+  const email = readString(body, "email", "e-mail").toLowerCase();
+  if (!EMAIL_PATTERN.test(email)) {
+    throw AppError.validation("Informe um e-mail válido.");
+  }
+  return email;
+}
 
 export const getAllUsers = async (_req: Request, res: Response) => {
   try {
