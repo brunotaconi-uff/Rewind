@@ -80,6 +80,26 @@ export function ReviewIcon(props: IconProps) {
   );
 }
 
+/** Porta com seta pra fora: "sair" */
+export function LogoutIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M9.5 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3.5" />
+      <path d="M16 16.5 20.5 12 16 7.5M20.5 12H9.5" />
+    </Icon>
+  );
+}
+
+/** Porta com seta pra dentro: "entrar" */
+export function LoginIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M14.5 4H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3.5" />
+      <path d="M10 16.5 14.5 12 10 7.5M14.5 12H3.5" />
+    </Icon>
+  );
+}
+
 export function CloseIcon(props: IconProps) {
   return (
     <Icon {...props}>

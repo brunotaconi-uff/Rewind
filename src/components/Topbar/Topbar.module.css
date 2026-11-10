@@ -35,6 +35,8 @@
   height: 40px;
   border-radius: 50%;
   background-color: #dcdcec;
+  border: none; 
+  cursor: pointer;
   color: var(--color-text-muted);
   transition: background-color 0.2s ease, color 0.2s ease;
 }
