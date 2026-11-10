@@ -25,6 +25,8 @@ model User {
   reviews      Review[]
   comments     Comment[]
   reviewLikes  ReviewLike[]
+  following    Follow[]     @relation("Following")
+  followers    Follow[]     @relation("Followers")
 
   @@map("users")
 }
@@ -44,8 +46,8 @@ model Album {
   id           String  @id @default(uuid()) @db.Uuid
   externalId   String  @unique
   title        String
-  coverUrl     String
-  releaseYear  Int
+  coverUrl     String?
+  releaseYear  Int?
   totalTracks  Int
   createdAt    DateTime @default(now())
 
@@ -152,4 +154,17 @@ model ReviewLike {
 
   @@id([userId, reviewId])
   @@map("review_likes")
+}
+
+model Follow {
+  followerId  String   @db.Uuid
+  followingId String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  follower    User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+  @@map("follows")
 }

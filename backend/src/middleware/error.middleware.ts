@@ -20,6 +20,12 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     return;
   }
 
+  // Corpo acima do limite do express.json/express.raw (ex.: foto com mais de 2 MB).
+  if (error?.type === "entity.too.large") {
+    res.status(413).json({ error: { code: "VALIDATION_ERROR", message: "O arquivo enviado é grande demais." } });
+    return;
+  }
+
   // JSON malformado no corpo da requisição (express.json).
   if (error?.type === "entity.parse.failed") {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "JSON inválido." } });

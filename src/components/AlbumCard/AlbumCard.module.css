@@ -80,6 +80,15 @@
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
+/* Álbum nos favoritos: coração preenchido sempre, não só no hover. */
+.favoriteActive {
+  color: var(--color-favorite);
+}
+
+.favoriteActive svg {
+  fill: currentColor;
+}
+
 .action:focus-visible {
   outline: 2px solid #5b5e74;
   outline-offset: 1px;

@@ -42,3 +42,5 @@ next-env.d.ts
 
 # prisma
 backend/generated/
+# fotos de perfil enviadas em desenvolvimento
+backend/uploads/

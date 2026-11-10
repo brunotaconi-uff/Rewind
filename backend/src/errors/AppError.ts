@@ -1,6 +1,7 @@
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "NOT_FOUND"
+  | "CONFLICT"
   | "EXTERNAL_API_RATE_LIMITED"
   | "EXTERNAL_API_UNAVAILABLE"
   | "EXTERNAL_API_TIMEOUT"
@@ -24,6 +25,10 @@ export class AppError extends Error {
 
   static notFound(message = "Recurso não encontrado."): AppError {
     return new AppError("NOT_FOUND", 404, message);
+  }
+
+  static conflict(message: string): AppError {
+    return new AppError("CONFLICT", 409, message);
   }
 }
 

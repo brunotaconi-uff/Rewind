@@ -11,10 +11,13 @@ interface AlbumCardProps {
   album: AlbumSummary;
   /** Média das avaliações do Rewind; null = sem avaliações. */
   averageRating?: number | null;
+  /** Se o álbum está nos favoritos do usuário logado. */
+  favorite?: boolean;
+  onToggleFavorite?: (album: AlbumSummary) => void;
   onReview: (album: AlbumSummary) => void;
 }
 
-export function AlbumCard({ album, averageRating = null, onReview }: AlbumCardProps) {
+export function AlbumCard({ album, averageRating = null, favorite = false, onToggleFavorite, onReview }: AlbumCardProps) {
   const artists = album.artists.map((artist) => artist.name).join(", ");
 
   return (
@@ -31,16 +34,18 @@ export function AlbumCard({ album, averageRating = null, onReview }: AlbumCardPr
         </span>
       </Link>
 
-      {/* Ouvido e favorito ganham ação quando existirem as rotas no backend. */}
+      {/* Ouvido ganha ação quando existir a rota no backend. */}
       <div className={styles.actions}>
         <button type="button" className={styles.action} title="Marcar como ouvido" aria-label={`Marcar ${album.title} como ouvido`}>
           <ListenedIcon size={18} />
         </button>
         <button
           type="button"
-          className={`${styles.action} ${styles.favorite}`}
-          title="Adicionar aos favoritos"
-          aria-label={`Adicionar ${album.title} aos favoritos`}
+          className={`${styles.action} ${styles.favorite} ${favorite ? styles.favoriteActive : ""}`}
+          title={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          aria-label={favorite ? `Remover ${album.title} dos favoritos` : `Adicionar ${album.title} aos favoritos`}
+          aria-pressed={favorite}
+          onClick={() => onToggleFavorite?.(album)}
         >
           <HeartIcon size={18} />
         </button>

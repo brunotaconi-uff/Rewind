@@ -24,3 +24,11 @@ export function createMusicProvider(): MusicProvider {
   if (env.musicCacheTtlSeconds === 0) return provider;
   return new CachedMusicProvider(provider, { ttlMs: env.musicCacheTtlSeconds * 1000 });
 }
+
+let sharedProvider: MusicProvider | undefined;
+
+/** Instância única usada pelas rotas, para todas compartilharem o mesmo cache. */
+export function getMusicProvider(): MusicProvider {
+  sharedProvider ??= createMusicProvider();
+  return sharedProvider;
+}

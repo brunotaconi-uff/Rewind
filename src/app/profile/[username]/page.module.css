@@ -1,0 +1,11 @@
+.seeAll {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.seeAll:hover {
+  color: var(--color-text);
+}
