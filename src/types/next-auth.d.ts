@@ -7,11 +7,15 @@ declare module "next-auth" {
   interface User {
     username: string;
     accessToken: string;
+    // ms em que o token do backend expira 
+    accessTokenExpires: number; 
   }
 
   interface Session {
     /** Token do backend, para as rotas com authMiddleware. */
     accessToken: string;
+    //é preenchido quando o token do backend expira e o Providers fazer logout automático.
+    error?: "SessionExpired";
     user: {
       id: string;
       username: string;
@@ -27,5 +31,7 @@ declare module "next-auth/jwt" {
     userId: string;
     username: string;
     accessToken: string;
+    accessTokenExpires?: number; 
+    error?: "SessionExpired";
   }
 }

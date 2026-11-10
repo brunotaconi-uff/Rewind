@@ -87,7 +87,8 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     const error = responseBody?.error;
     // As rotas de usuário antigas e o authMiddleware devolvem { error: "mensagem" }.
     if (response.status === 401) {
-      throw new ApiError("UNAUTHORIZED", 401, typeof error === "string" ? error : "Faça login para continuar.");
+      const message = typeof error === "string" ? error : error?.message;
+      throw new ApiError("UNAUTHORIZED", 401, message ?? "Faça login para continuar.");
     }
     const code = KNOWN_CODES.includes(error?.code) ? (error.code as ApiErrorCode) : "UNKNOWN_ERROR";
     throw new ApiError(code, response.status, error?.message ?? `Erro HTTP ${response.status}`);
