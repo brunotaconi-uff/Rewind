@@ -126,6 +126,7 @@ model Review {
 
   @@index([userId])
   @@index([albumId])
+  @@unique([userId, albumId])
   @@map("reviews")
 }
 

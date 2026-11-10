@@ -73,3 +73,13 @@ Gere o Prisma Client: ```npx prisma generate```
 Inicie o servidor de desenvolvimento: ```npm run dev```
 
 O back-end estará disponível em: http://localhost:3001
+
+## Testes de integração do back-end
+
+Na raiz do projeto, execute:
+
+```bash
+npm test
+```
+
+Os testes exercitam as rotas HTTP de cadastro, login, busca de álbuns e avaliações. O banco de dados e o provider de música são simulados, então os testes não exigem PostgreSQL nem acesso à Deezer.

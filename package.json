@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npm --prefix backend test"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
