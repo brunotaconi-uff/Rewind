@@ -27,6 +27,20 @@ function readText(body: Record<string, unknown>, field: keyof typeof LIMITS, lab
   return text;
 }
 
+/** Valida o nome de usuário */
+export function parseUsername(value: unknown): string {
+  const username = typeof value === "string" ? value.trim() : "";
+  if (!USERNAME_PATTERN.test(username)) {
+    throw AppError.validation("O nome de usuário deve ter de 3 a 30 caracteres: letras, números, ponto ou sublinhado.",
+    );
+  }
+
+  if (RESERVED_USERNAMES.includes(username.toLowerCase())) {
+    throw AppError.validation("Esse nome de usuário não pode ser usado.");
+  }
+  return username;
+}
+
 /** Valida o corpo do PATCH /users/me. Só os campos enviados são alterados. */
 export function parseProfileUpdate(body: unknown): ProfileUpdate {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
