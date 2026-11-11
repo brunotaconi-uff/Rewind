@@ -1,10 +1,14 @@
+import { del, put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { AppError } from "../errors/AppError";
 import { prisma } from "../lib/prisma";
 
-// As fotos ficam em backend/uploads/avatars e são servidas em /uploads (ver server.ts).
+// Onde as fotos ficam:
+// - com BLOB_READ_WRITE_TOKEN (deploy na Vercel): no Vercel Blob, porque lá o disco
+//   é temporário e o express.static não serve arquivos;
+// - sem ele (desenvolvimento local): em backend/uploads/avatars, servidas em /uploads (ver app.ts).
 export const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
 const AVATARS_DIR = path.join(UPLOADS_DIR, "avatars");
 const AVATARS_URL_PATH = "/uploads/avatars/";
@@ -12,6 +16,25 @@ const AVATARS_URL_PATH = "/uploads/avatars/";
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
 type ImageExtension = "jpg" | "png" | "webp" | "gif";
+
+const CONTENT_TYPES: Record<ImageExtension, string> = {
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+};
+
+function usesBlobStorage(): boolean {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
+
+function isBlobUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname.endsWith(".blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}
 
 /** Descobre o formato pelos primeiros bytes do arquivo, sem confiar no Content-Type. */
 export function detectImageType(file: Buffer): ImageExtension | null {
@@ -26,9 +49,26 @@ export function detectImageType(file: Buffer): ImageExtension | null {
   return null;
 }
 
-/** Apaga a foto anterior se ela foi enviada para este servidor (ignora URLs externas). */
+/** Guarda a foto e devolve a URL pública dela. */
+async function storeAvatar(fileName: string, file: Buffer, extension: ImageExtension, baseUrl: string) {
+  if (usesBlobStorage()) {
+    const blob = await put(`avatars/${fileName}`, file, { access: "public", contentType: CONTENT_TYPES[extension] });
+    return blob.url;
+  }
+
+  await mkdir(AVATARS_DIR, { recursive: true });
+  await writeFile(path.join(AVATARS_DIR, fileName), file);
+  return `${baseUrl}${AVATARS_URL_PATH}${fileName}`;
+}
+
+/** Apaga a foto anterior se ela foi enviada por este backend (ignora URLs externas). */
 async function removeOldAvatar(avatarUrl: string | null) {
   if (!avatarUrl) return;
+  if (isBlobUrl(avatarUrl)) {
+    if (usesBlobStorage()) await del(avatarUrl).catch(() => undefined);
+    return;
+  }
+
   const index = avatarUrl.indexOf(AVATARS_URL_PATH);
   if (index === -1) return;
 
@@ -53,12 +93,8 @@ export const saveAvatarService = async (userId: string, file: unknown, baseUrl: 
 
   // Nome novo a cada envio para o navegador não mostrar a foto antiga do cache.
   const fileName = `${userId}-${randomUUID()}.${extension}`;
-  await mkdir(AVATARS_DIR, { recursive: true });
-  await writeFile(path.join(AVATARS_DIR, fileName), file);
+  const avatarUrl = await storeAvatar(fileName, file, extension, baseUrl);
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { avatarUrl: `${baseUrl}${AVATARS_URL_PATH}${fileName}` },
-  });
+  await prisma.user.update({ where: { id: userId }, data: { avatarUrl } });
   await removeOldAvatar(user.avatarUrl);
 };
