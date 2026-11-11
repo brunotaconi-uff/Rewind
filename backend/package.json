@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
+    "build": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
     "test": "tsx --test \"tests/**/*.test.ts\""
   },
   "keywords": [],
@@ -24,6 +26,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "@vercel/blob": "2.8.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
