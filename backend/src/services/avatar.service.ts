@@ -6,9 +6,10 @@ import { AppError } from "../errors/AppError";
 import { prisma } from "../lib/prisma";
 
 // Onde as fotos ficam:
-// - com BLOB_READ_WRITE_TOKEN (deploy na Vercel): no Vercel Blob, porque lá o disco
-//   é temporário e o express.static não serve arquivos;
-// - sem ele (desenvolvimento local): em backend/uploads/avatars, servidas em /uploads (ver app.ts).
+// - com um Blob conectado (deploy na Vercel): no Vercel Blob, porque lá o disco é
+//   temporário e o express.static não serve arquivos. A Vercel define BLOB_STORE_ID e o
+//   SDK se autentica sozinho (OIDC); BLOB_READ_WRITE_TOKEN também serve, se existir;
+// - sem nenhum dos dois (desenvolvimento local): em backend/uploads/avatars, servidas em /uploads (ver app.ts).
 export const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
 const AVATARS_DIR = path.join(UPLOADS_DIR, "avatars");
 const AVATARS_URL_PATH = "/uploads/avatars/";
@@ -25,7 +26,7 @@ const CONTENT_TYPES: Record<ImageExtension, string> = {
 };
 
 function usesBlobStorage(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  return Boolean(process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN);
 }
 
 function isBlobUrl(url: string): boolean {
