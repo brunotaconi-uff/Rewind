@@ -8,6 +8,7 @@ import {
 	loginUserService,
 	getUserByIdService,
 } from "../services/user.service";
+import { searchUsersService } from "../services/user-search.service";
 
 // Os erros são lançados como AppError; o Express 5 encaminha erros de handlers
 // async para o error.middleware, que responde { error: { code, message } }.
@@ -45,6 +46,23 @@ function readEmail(body: Record<string, unknown>): string {
 	}
 	return email;
 }
+
+export const searchUsers = async (req: AuthRequest, res: Response) => {
+  const username =
+    typeof req.query.username === "string"
+      ? req.query.username.trim()
+      : "";
+
+  if (!username) {
+    throw AppError.validation(
+      'Informe o nome de usuário no parâmetro "username".'
+    );
+  }
+
+  const users = await searchUsersService(username, req.userId!);
+
+  return res.json({ data: users });
+};
 
 export const getAllUsers = async (_req: Request, res: Response) => {
 	res.json(await getAllUsersService());

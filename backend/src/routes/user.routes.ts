@@ -5,11 +5,13 @@ import {
   createUser,
   login,
   getMe,
-  logout
+  logout,
+  searchUsers
 } from "../controllers/user.controller";
 import { getFeed, getProfile, updateMyProfile, uploadMyAvatar } from "../controllers/profile.controller";
 import { addFavorite, listFavorites, removeFavorite } from "../controllers/favorite.controller";
 import { MAX_AVATAR_BYTES } from "../services/avatar.service";
+import { followUser, unfollowUser } from "../controllers/follow.controller";
 
 const router = Router();
 
@@ -19,6 +21,16 @@ router.get("/me", authMiddleware, getMe);
 router.post("/", createUser);
 router.post("/login", login);
 router.post("/logout", authMiddleware, logout);
+
+// Busca de usuários
+router.get("/search", authMiddleware, searchUsers);
+
+// Feed geral: atividades de quem o usuário segue
+// router.get("/feed", authMiddleware, getFollowingFeed);
+
+// Seguir e deixar de seguir
+router.post("/:userId/follow", authMiddleware, followUser);
+router.delete("/:userId/follow", authMiddleware, unfollowUser);
 
 router.patch("/me", authMiddleware, updateMyProfile);
 // A foto vai crua no corpo (Content-Type image/...), sem multipart.
