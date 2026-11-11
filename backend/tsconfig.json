@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    // Com "type": "commonjs" no package.json, "nodenext" faz o TypeScript gerar
+    // require/module.exports. Sem este arquivo, a Vercel compilava em ESM e a função
+    // quebrava ao carregar ("Failed to load the ES module").
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "include": ["src", "tests", "prisma.config.ts"]
+}
