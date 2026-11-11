@@ -108,3 +108,60 @@ export const getUserFeedService = async (username: string, limit = FEED_DEFAULT_
     album: toAlbumSummary(review.album),
   }));
 };
+
+// 6.2-B4: feed geral com avaliações dos usuários seguidos
+export const getFollowingFeedService = async (
+  userId: string,
+  limit = FEED_DEFAULT_LIMIT
+) => {
+  const follows = await prisma.follow.findMany({
+    where: {
+      followerId: userId,
+    },
+    select: {
+      followingId: true,
+    },
+  });
+
+  const followingIds = follows.map((follow) => follow.followingId);
+
+  if (followingIds.length === 0) {
+    return [];
+  }
+
+  const reviews = await prisma.review.findMany({
+    where: {
+      userId: {
+        in: followingIds,
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: limit,
+    select: {
+      id: true,
+      rating: true,
+      content: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+      album: {
+        select: albumSummarySelect,
+      },
+    },
+  });
+
+  return reviews.map((review) => ({
+    ...review,
+    rating: Number(review.rating),
+    content: review.content?.trim() ? review.content : null,
+    album: toAlbumSummary(review.album),
+  }));
+};

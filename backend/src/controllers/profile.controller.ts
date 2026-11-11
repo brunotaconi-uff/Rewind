@@ -8,6 +8,7 @@ import {
   getProfileByUsernameService,
   getUserFeedService,
   updateProfileService,
+  getFollowingFeedService
 } from "../services/profile.service";
 import { parseProfileUpdate } from "../services/profile.validation";
 
@@ -39,4 +40,29 @@ export const getFeed = async (req: Request<{ username: string }>, res: Response)
     }
   }
   res.json({ data: await getUserFeedService(req.params.username, limit) });
+};
+
+export const getFollowingFeed = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  let limit: number | undefined;
+
+  if (req.query.limit !== undefined) {
+    limit = Number(req.query.limit);
+
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > FEED_MAX_LIMIT
+    ) {
+      throw AppError.validation(
+        `O parâmetro "limit" deve ser um inteiro entre 1 e ${FEED_MAX_LIMIT}.`
+      );
+    }
+  }
+
+  const feed = await getFollowingFeedService(req.userId!, limit);
+
+  return res.json({ data: feed });
 };

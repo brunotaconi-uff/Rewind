@@ -5,11 +5,13 @@ import {
   createUser,
   login,
   getMe,
-  logout
+  logout,
+  searchUsers
 } from "../controllers/user.controller";
-import { getFeed, getProfile, updateMyProfile, uploadMyAvatar } from "../controllers/profile.controller";
+import { getFeed, getProfile, updateMyProfile, uploadMyAvatar, getFollowingFeed  } from "../controllers/profile.controller";
 import { addFavorite, listFavorites, removeFavorite } from "../controllers/favorite.controller";
 import { MAX_AVATAR_BYTES } from "../services/avatar.service";
+import { followUser, unfollowUser } from "../controllers/follow.controller";
 
 const router = Router();
 
@@ -32,6 +34,16 @@ router.put(
 // albumId é o externalId do álbum na API de música.
 router.post("/me/favorites", authMiddleware, addFavorite);
 router.delete("/me/favorites/:albumId", authMiddleware, removeFavorite);
+
+// Busca de usuários
+router.get("/search", authMiddleware, searchUsers);
+
+// Feed geral: atividades de quem o usuário segue
+router.get("/feed", authMiddleware, getFollowingFeed);
+
+// Seguir e deixar de seguir
+router.post("/:userId/follow", authMiddleware, followUser);
+router.delete("/:userId/follow", authMiddleware, unfollowUser);
 
 // Perfil público. Fica depois de /me para não capturar essa rota.
 router.get("/:username", getProfile);
