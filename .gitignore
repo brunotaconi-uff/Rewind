@@ -44,3 +44,4 @@ next-env.d.ts
 backend/generated/
 # fotos de perfil enviadas em desenvolvimento
 backend/uploads/
+backend/dist/
