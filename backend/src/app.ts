@@ -30,3 +30,8 @@ export function createApp(musicProvider: MusicProvider = getMusicProvider()) {
 
   return app;
 }
+
+// Ponto de entrada na Vercel: ela procura src/app.ts antes de src/server.ts e exige
+// que o export default seja o app (uma função). Localmente quem sobe o servidor é o
+// server.ts; os testes usam o createApp com um provider de música falso.
+export default createApp();
