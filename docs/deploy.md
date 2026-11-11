@@ -16,7 +16,7 @@ A cada merge no `main`, a Vercel publica os dois sozinha. Cada PR ganha um link 
 1. Na Vercel: **Add New → Project**, importar `lucasilvr/Rewind`, **Root Directory = `backend`**. (O dono do repositório precisa autorizar o app da Vercel no GitHub.)
 2. Em **Storage**, criar e conectar ao projeto:
    - um banco **Neon (Postgres)**: preenche `DATABASE_URL` (com pooler) e `DATABASE_URL_UNPOOLED` (conexão direta, usada pelas migrations);
-   - um **Blob** com acesso **público**: preenche `BLOB_READ_WRITE_TOKEN`.
+   - um **Blob** com acesso **público**: preenche `BLOB_STORE_ID`. Não precisa de token: dentro da Vercel, o SDK se autentica sozinho.
 3. Em **Settings → Environment Variables**, adicionar:
    - `JWT_SECRET`: um valor novo, gerado com `openssl rand -hex 32` (não usar o do `.env` local).
    - As `MUSIC_*` são opcionais; os valores padrão servem.
@@ -46,7 +46,7 @@ O build está em [`backend/vercel.json`](../backend/vercel.json): roda `prisma g
 | | Local | Produção |
 |---|---|---|
 | Banco | Postgres do `docker-compose` (porta 5433) | Neon |
-| Fotos de perfil | `backend/uploads` (sem `BLOB_READ_WRITE_TOKEN`) | Vercel Blob |
+| Fotos de perfil | `backend/uploads` (sem `BLOB_STORE_ID`) | Vercel Blob |
 | Cache das buscas na Deezer | em memória, dura enquanto o servidor roda | em memória, zera quando a Vercel recicla a função |
 
 Rodar localmente continua igual: veja o [README](../README.md).

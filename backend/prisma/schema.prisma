@@ -1,6 +1,9 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  // O backend é CommonJS ("type": "commonjs"). Sem isto, o client sai em formato ESM,
+  // que o tsx aceita localmente mas quebra a função na Vercel (FUNCTION_INVOCATION_FAILED).
+  moduleFormat = "cjs"
 }
 
 datasource db {
