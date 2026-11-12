@@ -158,6 +158,8 @@ before(async () => {
 			{
 				...review,
 				user: { id: userId, name: "Ana", username: "ana", avatarUrl: null },
+				_count: { likes: 0 },
+				likes: [],
 			},
 		],
 	});
@@ -222,9 +224,12 @@ test("cadastro, login e rota autenticada de usuário", async () => {
 	assert.equal(((await me.json()) as { username: string }).username, "ana");
 
 	followExists = true;
-	const followStatus = await fetch(`${baseUrl}/users/44444444-4444-4444-8444-444444444444/follow`, {
-		headers: { authorization: `Bearer ${loginResult.token}` },
-	});
+	const followStatus = await fetch(
+		`${baseUrl}/users/44444444-4444-4444-8444-444444444444/follow`,
+		{
+			headers: { authorization: `Bearer ${loginResult.token}` },
+		},
+	);
 	assert.equal(followStatus.status, 200);
 	assert.deepEqual(await followStatus.json(), { data: { following: true } });
 
@@ -527,5 +532,161 @@ test("avaliação: nota obrigatória, álbum gravado na primeira avaliação e u
 		assert.equal(await getMyReview(), null);
 	} finally {
 		prisma.review.findFirst = reviewFindFirst;
+	}
+});
+
+// 6.3: curtir e descurtir atividades de outras pessoas.
+test("curtidas: uma por usuário por atividade, contador e likedByMe", async () => {
+	const login = await fetch(`${baseUrl}/users/login`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({
+			email: "ana@example.test",
+			password: "senha-segura",
+		}),
+	});
+	const { token } = (await login.json()) as { token: string };
+
+	const otherUserId = "44444444-4444-4444-8444-444444444444";
+	const otherReviewId = "55555555-5555-4555-8555-555555555555";
+	const missingReviewId = "66666666-6666-4666-8666-666666666666";
+	// Quem curtiu a atividade da outra pessoa (simula a tabela review_likes).
+	const likedBy = new Set<string>();
+
+	const reviewMethods = {
+		findUnique: prisma.review.findUnique,
+		findMany: prisma.review.findMany,
+	};
+	const likeMethods = {
+		upsert: prisma.reviewLike.upsert,
+		deleteMany: prisma.reviewLike.deleteMany,
+		count: prisma.reviewLike.count,
+		findUnique: prisma.reviewLike.findUnique,
+	};
+	type LikeKey = {
+		where: { userId_reviewId: { userId: string; reviewId: string } };
+	};
+	Object.assign(prisma.review, {
+		findUnique: async ({ where }: { where: { id: string } }) => {
+			if (where.id === otherReviewId) return { userId: otherUserId };
+			if (where.id === review.id) return { userId };
+			return null;
+		},
+		findMany: async ({
+			select,
+		}: {
+			select: { likes: { where: { userId: string } } };
+		}) => [
+			{
+				...review,
+				id: otherReviewId,
+				user: {
+					id: otherUserId,
+					name: "Bia",
+					username: "bia",
+					avatarUrl: null,
+				},
+				_count: { likes: likedBy.size },
+				likes: likedBy.has(select.likes.where.userId)
+					? [{ userId: select.likes.where.userId }]
+					: [],
+			},
+		],
+	});
+	Object.assign(prisma.reviewLike, {
+		upsert: async ({ where }: LikeKey) => {
+			likedBy.add(where.userId_reviewId.userId);
+			return where.userId_reviewId;
+		},
+		deleteMany: async ({ where }: { where: { userId: string } }) => {
+			const existed = likedBy.delete(where.userId);
+			return { count: existed ? 1 : 0 };
+		},
+		count: async () => likedBy.size,
+		findUnique: async ({ where }: LikeKey) =>
+			likedBy.has(where.userId_reviewId.userId)
+				? { userId: where.userId_reviewId.userId }
+				: null,
+	});
+
+	const like = (reviewId: string, method: "POST" | "DELETE", auth = true) =>
+		fetch(`${baseUrl}/reviews/${reviewId}/like`, {
+			method,
+			headers: auth ? { authorization: `Bearer ${token}` } : {},
+		});
+	const summary = async (response: Response) =>
+		(
+			(await response.json()) as {
+				data: { likesCount: number; likedByMe: boolean };
+			}
+		).data;
+
+	try {
+		const withoutLogin = await like(otherReviewId, "POST", false);
+		assert.equal(withoutLogin.status, 401);
+
+		const liked = await like(otherReviewId, "POST");
+		assert.equal(liked.status, 200);
+		assert.deepEqual(await summary(liked), {
+			reviewId: otherReviewId,
+			likesCount: 1,
+			likedByMe: true,
+		});
+
+		// Curtir de novo não conta duas vezes.
+		const likedAgain = await like(otherReviewId, "POST");
+		assert.equal(likedAgain.status, 200);
+		assert.equal((await summary(likedAgain)).likesCount, 1);
+
+		// O contador e o "curti" aparecem na lista de resenhas do álbum.
+		const reviews = await fetch(`${baseUrl}/albums/302127/reviews`, {
+			headers: { authorization: `Bearer ${token}` },
+		});
+		const [listed] = (
+			(await reviews.json()) as {
+				data: Array<{
+					likesCount: number;
+					likedByMe: boolean;
+					_count?: unknown;
+				}>;
+			}
+		).data;
+		assert.equal(listed.likesCount, 1);
+		assert.equal(listed.likedByMe, true);
+		assert.equal(listed._count, undefined);
+
+		// Sem login a rota continua pública, só sem o "curti".
+		const anonymous = await fetch(`${baseUrl}/albums/302127/reviews`);
+		const [anonymousListed] = (
+			(await anonymous.json()) as {
+				data: Array<{ likesCount: number; likedByMe: boolean }>;
+			}
+		).data;
+		assert.equal(anonymousListed.likesCount, 1);
+		assert.equal(anonymousListed.likedByMe, false);
+
+		const unliked = await like(otherReviewId, "DELETE");
+		assert.equal(unliked.status, 200);
+		assert.deepEqual(await summary(unliked), {
+			reviewId: otherReviewId,
+			likesCount: 0,
+			likedByMe: false,
+		});
+
+		// Descurtir de novo não dá erro.
+		const unlikedAgain = await like(otherReviewId, "DELETE");
+		assert.equal(unlikedAgain.status, 200);
+
+		const ownActivity = await like(review.id, "POST");
+		assert.equal(ownActivity.status, 400);
+
+		const missing = await like(missingReviewId, "POST");
+		assert.equal(missing.status, 404);
+
+		const invalidId = await like("nao-e-um-id", "POST");
+		assert.equal(invalidId.status, 404);
+	} finally {
+		Object.assign(prisma.review, reviewMethods);
+		Object.assign(prisma.reviewLike, likeMethods);
 	}
 });
