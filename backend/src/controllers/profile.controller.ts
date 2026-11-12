@@ -31,7 +31,7 @@ export const uploadMyAvatar = async (req: AuthRequest, res: Response) => {
   res.json({ data: await getProfileByIdService(req.userId!) });
 };
 
-export const getFeed = async (req: Request<{ username: string }>, res: Response) => {
+export const getFeed = async (req: Request<{ username: string }> & { userId?: string }, res: Response) => {
   let limit: number | undefined;
   if (req.query.limit !== undefined) {
     limit = Number(req.query.limit);
@@ -39,7 +39,7 @@ export const getFeed = async (req: Request<{ username: string }>, res: Response)
       throw AppError.validation(`O parâmetro "limit" deve ser um inteiro entre 1 e ${FEED_MAX_LIMIT}.`);
     }
   }
-  res.json({ data: await getUserFeedService(req.params.username, limit) });
+  res.json({ data: await getUserFeedService(req.params.username, limit, req.userId) });
 };
 
 export const getFollowingFeed = async (

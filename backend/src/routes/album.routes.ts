@@ -1,8 +1,13 @@
 import { Router } from "express";
 import { AppError } from "../errors/AppError";
 import { prisma } from "../lib/prisma";
-import { authMiddleware, AuthRequest } from "../middleware/auth.middleware";
+import {
+	authMiddleware,
+	AuthRequest,
+	optionalAuthMiddleware,
+} from "../middleware/auth.middleware";
 import { ensureAlbum, isUniqueViolation } from "../services/album.service";
+import { likesSelect, withLikeFields } from "../services/like.service";
 import { getMusicProvider } from "../services/music/music.provider";
 import type { MusicProvider } from "../services/music/music.types";
 
@@ -20,9 +25,7 @@ function readRating(value: unknown): number {
 		value > 5 ||
 		(value * 10) % 5 !== 0
 	) {
-		throw AppError.validation(
-			"A nota deve ser um número entre 1 e 5.",
-		);
+		throw AppError.validation("A nota deve ser um número entre 1 e 5.");
 	}
 	return value;
 }
@@ -173,34 +176,40 @@ export function createAlbumRouter(
 	});
 
 	// Só avaliações com texto (resenhas), das mais recentes para as mais antigas.
-	router.get("/:id/reviews", async (req, res) => {
-		const { id } = req.params;
+	// Login opcional: com token, cada resenha diz se você curtiu (6.3).
+	router.get(
+		"/:id/reviews",
+		optionalAuthMiddleware,
+		async (req: AuthRequest, res) => {
+			const id = readAlbumId(req.params.id);
 
-		const reviews = await prisma.review.findMany({
-			where: {
-				album: { externalId: id },
-				content: { not: null },
-				NOT: { content: "" },
-			},
-			orderBy: { createdAt: "desc" },
-			select: {
-				id: true,
-				rating: true,
-				content: true,
-				createdAt: true,
-				user: {
-					select: { id: true, name: true, username: true, avatarUrl: true },
+			const reviews = await prisma.review.findMany({
+				where: {
+					album: { externalId: id },
+					content: { not: null },
+					NOT: { content: "" },
 				},
-			},
-		});
+				orderBy: { createdAt: "desc" },
+				select: {
+					id: true,
+					rating: true,
+					content: true,
+					createdAt: true,
+					user: {
+						select: { id: true, name: true, username: true, avatarUrl: true },
+					},
+					...likesSelect(req.userId),
+				},
+			});
 
-		res.json({
-			data: reviews.map((review) => ({
-				...review,
-				rating: Number(review.rating),
-			})),
-		});
-	});
+			res.json({
+				data: reviews.map((review) => ({
+					...withLikeFields(review),
+					rating: Number(review.rating),
+				})),
+			});
+		},
+	);
 
 	return router;
 }
