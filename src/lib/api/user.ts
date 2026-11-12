@@ -25,6 +25,20 @@ export interface UserProfile {
   stats: ProfileStats;
 }
 
+export interface UserSearchResult {
+  id: string;
+  name: string;
+  username: string;
+  avatarUrl: string | null;
+}
+
+export interface FeedAuthor {
+  id: string;
+  name: string;
+  username: string;
+  avatarUrl: string | null;
+}
+
 interface DataResponse<T> {
   data: T;
 }
@@ -34,6 +48,34 @@ const userPath = (username: string) => `/users/${encodeURIComponent(username)}`;
 export async function getUserProfile(username: string): Promise<UserProfile> {
   const response = await apiGet<DataResponse<UserProfile>>(userPath(username));
   return response.data;
+}
+
+export async function searchUsers(token: string, username: string): Promise<UserSearchResult[]> {
+  const query = encodeURIComponent(username);
+  const response = await apiRequest<DataResponse<UserSearchResult[]>>(`/users/search?username=${query}`, { token });
+  return response.data;
+}
+
+export async function getFollowStatus(token: string, userId: string): Promise<boolean> {
+  const response = await apiRequest<DataResponse<{ following: boolean }>>(
+    `/users/${encodeURIComponent(userId)}/follow`,
+    { token },
+  );
+  return response.data.following;
+}
+
+export async function followUser(token: string, userId: string): Promise<void> {
+  await apiRequest<DataResponse<{ following: boolean }>>(`/users/${encodeURIComponent(userId)}/follow`, {
+    method: "POST",
+    token,
+  });
+}
+
+export async function unfollowUser(token: string, userId: string): Promise<void> {
+  await apiRequest<DataResponse<{ following: boolean }>>(`/users/${encodeURIComponent(userId)}/follow`, {
+    method: "DELETE",
+    token,
+  });
 }
 
 /** Campos editáveis do perfil. Texto vazio em bio, cidade ou país apaga o valor. */
@@ -93,11 +135,19 @@ export interface FeedItem {
   /** Data ISO. */
   createdAt: string;
   album: AlbumSummary;
+  user?: FeedAuthor;
 }
 
 /** Notas e resenhas do usuário, das mais recentes para as mais antigas. */
 export async function getUserFeed(username: string, limit?: number): Promise<FeedItem[]> {
   const query = limit ? `?limit=${limit}` : "";
   const response = await apiGet<DataResponse<FeedItem[]>>(`${userPath(username)}/feed${query}`);
+  return response.data;
+}
+
+/** Notas e resenhas das pessoas seguidas, das mais recentes para as mais antigas. */
+export async function getFollowingFeed(token: string, limit?: number): Promise<FeedItem[]> {
+  const query = limit ? `?limit=${limit}` : "";
+  const response = await apiRequest<DataResponse<FeedItem[]>>(`/users/feed${query}`, { token });
   return response.data;
 }

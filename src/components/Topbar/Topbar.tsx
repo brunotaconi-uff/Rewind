@@ -10,6 +10,7 @@ import {
 	HomeIcon,
 	LogoutIcon,
 	UserIcon,
+	UsersIcon,
 } from "@/components/icons/icons";
 import { SearchBar } from "@/components/SearchBar/SearchBar";
 import styles from "./Topbar.module.css";
@@ -38,6 +39,12 @@ function getNavItems(username: string | undefined): NavItem[] {
 			label: "Favoritos",
 			icon: HeartIcon,
 			isActive: (pathname) => Boolean(username) && pathname === favorites,
+		},
+		{
+			href: "/feed",
+			label: "Feed",
+			icon: UsersIcon,
+			isActive: (pathname) => pathname === "/feed",
 		},
 		{
 			href: profile,

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AlbumShelf, AlbumShelfSkeleton } from "@/components/AlbumShelf/AlbumShelf";
 import { ApiErrorMessage } from "@/components/ApiErrorMessage/ApiErrorMessage";
 import { EmptyState, Section } from "@/components/Section/Section";
+import { UserSearchResults } from "@/components/UserSearchResults/UserSearchResults";
 import { getErrorCode, type ApiErrorCode } from "@/lib/api/client";
 import { searchAlbums, searchAlbumsByArtist } from "@/lib/api/music";
 import styles from "./page.module.css";
@@ -10,16 +11,22 @@ import styles from "./page.module.css";
 const RESULTS_LIMIT = 12;
 
 interface SearchPageProps {
-  searchParams: Promise<{ q?: string | string[] }>;
+  searchParams: Promise<{ q?: string | string[]; type?: string | string[] }>;
 }
 
 function readQuery(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
 }
 
+function readType(value: string | string[] | undefined): "albums" | "users" {
+  return (Array.isArray(value) ? value[0] : value) === "users" ? "users" : "albums";
+}
+
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
-  const query = readQuery((await searchParams).q);
-  return { title: query ? `Busca: ${query} | Rewind` : "Busca | Rewind" };
+  const params = await searchParams;
+  const query = readQuery(params.q);
+  const type = readType(params.type);
+  return { title: query ? `Busca: ${query} | Rewind` : type === "users" ? "Buscar pessoas | Rewind" : "Busca | Rewind" };
 }
 
 type Loaded<T> = { data: T; errorCode: null } | { data: null; errorCode: ApiErrorCode };
@@ -103,13 +110,28 @@ function SearchResultsSkeleton() {
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const query = readQuery((await searchParams).q);
+  const params = await searchParams;
+  const query = readQuery(params.q);
+  const type = readType(params.type);
 
   if (!query) {
     return (
       <div className={styles.page}>
-        <h1 className={styles.heading}>Buscar álbuns</h1>
-        <EmptyState>Digite o nome de um álbum ou de um artista na barra de busca acima.</EmptyState>
+        <h1 className={styles.heading}>{type === "users" ? "Buscar pessoas" : "Buscar álbuns"}</h1>
+        <EmptyState>
+          {type === "users"
+            ? "Digite o nome de usuário na barra de busca acima."
+            : "Digite o nome de um álbum ou de um artista na barra de busca acima."}
+        </EmptyState>
+      </div>
+    );
+  }
+
+  if (type === "users") {
+    return (
+      <div className={styles.page}>
+        <h1 className={styles.heading}>Pessoas para “{query}”</h1>
+        <UserSearchResults query={query} />
       </div>
     );
   }

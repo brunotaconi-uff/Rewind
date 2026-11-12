@@ -29,6 +29,18 @@
   color: var(--color-text-muted);
 }
 
+.type {
+  flex-shrink: 0;
+  max-width: 100px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 @media (max-width: 768px) {
   .search {
     height: 40px;
@@ -38,5 +50,10 @@
 
   .input {
     font-size: 14px;
+  }
+
+  .type {
+    max-width: 76px;
+    font-size: 12px;
   }
 }

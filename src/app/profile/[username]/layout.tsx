@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ApiErrorMessage } from "@/components/ApiErrorMessage/ApiErrorMessage";
 import { EditProfileButton } from "@/components/EditProfile/EditProfileButton";
+import { FollowButton } from "@/components/FollowButton/FollowButton";
 import { ProfileHeader } from "@/components/ProfileHeader/ProfileHeader";
 import { ProfileTabs } from "@/components/ProfileTabs/ProfileTabs";
 import { ApiError, getErrorCode } from "@/lib/api/client";
@@ -40,7 +41,15 @@ export default async function ProfileLayout({ children, params }: ProfileLayoutP
   return (
     <main className={styles.page}>
       <div className={styles.container}>
-        <ProfileHeader profile={profile} actions={<EditProfileButton profile={profile} />} />
+        <ProfileHeader
+          profile={profile}
+          actions={
+            <>
+              <EditProfileButton profile={profile} />
+              <FollowButton profile={profile} />
+            </>
+          }
+        />
         <ProfileTabs username={profile.username} />
         <section>{children}</section>
       </div>
