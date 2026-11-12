@@ -58,6 +58,16 @@ export function UserIcon(props: IconProps) {
   );
 }
 
+export function UsersIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c0-3.4 2.8-5.8 6.5-5.8s6.5 2.4 6.5 5.8" />
+      <path d="M16 4.8a3.5 3.5 0 0 1 0 6.8M18 14.5c2.1.9 3.5 2.8 3.5 5.5" />
+    </Icon>
+  );
+}
+
 /** Caixa de álbum com nota musical: "marcar como ouvido". */
 export function ListenedIcon(props: IconProps) {
   return (

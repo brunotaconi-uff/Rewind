@@ -36,12 +36,14 @@ let review: {
 let baseUrl: string;
 let server: ReturnType<ReturnType<typeof createApp>["listen"]>;
 let searchedQuery = "";
+let followExists = false;
 const originalUserMethods = {
 	findFirst: prisma.user.findFirst,
 	create: prisma.user.create,
 	findUnique: prisma.user.findUnique,
 };
 const originalAlbumFindUnique = prisma.album.findUnique;
+const originalFollowFindUnique = prisma.follow.findUnique;
 const originalReviewMethods = {
 	create: prisma.review.create,
 	findFirst: prisma.review.findFirst,
@@ -127,6 +129,9 @@ before(async () => {
 	Object.assign(prisma.album, {
 		findUnique: async () => ({ id: albumId }),
 	});
+	Object.assign(prisma.follow, {
+		findUnique: async () => (followExists ? { followerId: userId } : null),
+	});
 	Object.assign(prisma.review, {
 		create: async ({ data }) => {
 			review = {
@@ -167,6 +172,7 @@ after(async () => {
 	prisma.user.create = originalUserMethods.create;
 	prisma.user.findUnique = originalUserMethods.findUnique;
 	prisma.album.findUnique = originalAlbumFindUnique;
+	prisma.follow.findUnique = originalFollowFindUnique;
 	prisma.review.create = originalReviewMethods.create;
 	prisma.review.findFirst = originalReviewMethods.findFirst;
 	prisma.review.update = originalReviewMethods.update;
@@ -214,6 +220,19 @@ test("cadastro, login e rota autenticada de usuário", async () => {
 	});
 	assert.equal(me.status, 200);
 	assert.equal(((await me.json()) as { username: string }).username, "ana");
+
+	followExists = true;
+	const followStatus = await fetch(`${baseUrl}/users/44444444-4444-4444-8444-444444444444/follow`, {
+		headers: { authorization: `Bearer ${loginResult.token}` },
+	});
+	assert.equal(followStatus.status, 200);
+	assert.deepEqual(await followStatus.json(), { data: { following: true } });
+
+	const selfFollow = await fetch(`${baseUrl}/users/${userId}/follow`, {
+		method: "POST",
+		headers: { authorization: `Bearer ${loginResult.token}` },
+	});
+	assert.equal(selfFollow.status, 400);
 });
 
 test("busca de álbuns responde com provider simulado, sem chamar a Deezer", async () => {

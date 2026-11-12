@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlbumCover } from "@/components/AlbumCover/AlbumCover";
+import { Avatar } from "@/components/Avatar/Avatar";
 import { StarRating } from "@/components/StarRating/StarRating";
 import type { FeedItem } from "@/lib/api/user";
 import { formatRelativeDate } from "@/lib/format";
@@ -13,7 +14,7 @@ interface ProfileFeedProps {
 export function ProfileFeed({ items }: ProfileFeedProps) {
   return (
     <ul className={styles.list}>
-      {items.map(({ id, rating, content, createdAt, album }) => {
+      {items.map(({ id, rating, content, createdAt, album, user }) => {
         const albumHref = `/album/${album.externalId}`;
         const artists = album.artists.map((artist) => artist.name).join(", ");
 
@@ -24,6 +25,18 @@ export function ProfileFeed({ items }: ProfileFeedProps) {
             </Link>
 
             <div className={styles.body}>
+              {user && (
+                <Link
+                  href={`/profile/${encodeURIComponent(user.username)}`}
+                  className={styles.author}
+                >
+                  <Avatar src={user.avatarUrl} name={user.name} size={28} />
+                  <span>
+                    {user.name}
+                    <span className={styles.username}> @{user.username}</span>
+                  </span>
+                </Link>
+              )}
               <div className={styles.header}>
                 <div className={styles.album}>
                   <Link href={albumHref} className={styles.title}>

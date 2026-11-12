@@ -11,7 +11,7 @@ import {
 import { getFeed, getProfile, updateMyProfile, uploadMyAvatar, getFollowingFeed  } from "../controllers/profile.controller";
 import { addFavorite, listFavorites, removeFavorite } from "../controllers/favorite.controller";
 import { MAX_AVATAR_BYTES } from "../services/avatar.service";
-import { followUser, unfollowUser } from "../controllers/follow.controller";
+import { getFollowStatus, followUser, unfollowUser } from "../controllers/follow.controller";
 
 const router = Router();
 
@@ -42,6 +42,7 @@ router.get("/search", authMiddleware, searchUsers);
 router.get("/feed", authMiddleware, getFollowingFeed);
 
 // Seguir e deixar de seguir
+router.get("/:userId/follow", authMiddleware, getFollowStatus);
 router.post("/:userId/follow", authMiddleware, followUser);
 router.delete("/:userId/follow", authMiddleware, unfollowUser);
 

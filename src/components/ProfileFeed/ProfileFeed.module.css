@@ -32,6 +32,25 @@
   min-width: 0;
 }
 
+.author {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.author:hover {
+  text-decoration: underline;
+}
+
+.username {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
 .header {
   display: flex;
   justify-content: space-between;

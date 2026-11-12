@@ -1,6 +1,27 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../errors/AppError";
 
+export const getFollowStatusService = async (
+  followerId: string,
+  followingId: string
+) => {
+  if (followerId === followingId) {
+    return { following: false };
+  }
+
+  const relation = await prisma.follow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId,
+        followingId,
+      },
+    },
+    select: { followerId: true },
+  });
+
+  return { following: relation !== null };
+};
+
 export const followUserService = async (
   followerId: string,
   followingId: string
