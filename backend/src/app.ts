@@ -3,6 +3,7 @@ import cors from "cors";
 import userRoutes from "./routes/user.routes";
 import { createAlbumRouter } from "./routes/album.routes";
 import { createMusicRouter } from "./routes/music.routes";
+import reviewRoutes from "./routes/review.routes";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 import { UPLOADS_DIR } from "./services/avatar.service";
 import { getMusicProvider } from "./services/music/music.provider";
@@ -23,6 +24,7 @@ export function createApp(musicProvider: MusicProvider = getMusicProvider()) {
 
 	app.use("/users", userRoutes);
 	app.use("/albums", createAlbumRouter(musicProvider));
+	app.use("/reviews", reviewRoutes);
 	app.use(createMusicRouter(musicProvider));
 
 	app.use(notFoundHandler);
