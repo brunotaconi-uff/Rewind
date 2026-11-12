@@ -400,6 +400,9 @@ test("avaliação: nota obrigatória, álbum gravado na primeira avaliação e u
 	const invalidRating = await postReview("302127", { rating: 6 });
 	assert.equal(invalidRating.status, 400);
 
+	const belowMinimum = await postReview("302127", { rating: 0.5 });
+	assert.equal(belowMinimum.status, 400);
+
 	// Só a nota é aceita; a resenha é opcional.
 	const onlyRating = await postReview("302127", { rating: 3 });
 	assert.equal(onlyRating.status, 201);

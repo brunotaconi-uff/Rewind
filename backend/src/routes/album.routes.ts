@@ -16,12 +16,12 @@ function readRating(value: unknown): number {
 	if (
 		typeof value !== "number" ||
 		!Number.isFinite(value) ||
-		value < 0.5 ||
+		value < 1 ||
 		value > 5 ||
 		(value * 10) % 5 !== 0
 	) {
 		throw AppError.validation(
-			"A nota deve ser um número entre 0,5 e 5, em incrementos de 0,5.",
+			"A nota deve ser um número entre 1 e 5.",
 		);
 	}
 	return value;

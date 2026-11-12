@@ -45,7 +45,7 @@ export async function getAlbumReviews(
 	return response.data;
 }
 
-/** Avaliação do usuário logado (5.4): nota de 0,5 a 5 e resenha opcional. */
+/** Avaliação do usuário logado (5.4): nota de 1 a 5 e resenha opcional. */
 export interface MyReview {
 	id: string;
 	rating: number;

@@ -14,7 +14,7 @@ import { createReview, getMyReview, updateReview } from "@/lib/api/review";
 import styles from "./ReviewModal.module.css";
 
 const MAX_CONTENT_LENGTH = 5000;
-const NO_RATING_MESSAGE = "Escolha uma nota de 0,5 a 5 estrelas para salvar.";
+const NO_RATING_MESSAGE = "Escolha uma nota de 1 a 5 estrelas para salvar.";
 
 interface ReviewModalProps {
 	/** Álbum sendo avaliado; null = modal fechado. */

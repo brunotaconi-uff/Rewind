@@ -4,9 +4,7 @@ import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { LEFT_HALF, STAR } from "@/components/StarRating/StarRating";
 import styles from "./StarInput.module.css";
 
-// 5.4-F1: escolha da nota de 0,5 a 5, em meias estrelas (a mesma escala que o backend aceita).
-
-const MIN = 0.5;
+const MIN = 1;
 const MAX = 5;
 
 interface StarInputProps {
@@ -29,7 +27,8 @@ function valueFromPointer(
 	star: number,
 ): number {
 	const { left, width } = event.currentTarget.getBoundingClientRect();
-	return event.clientX - left < width / 2 ? star - 0.5 : star;
+	const value = event.clientX - left < width / 2 ? star - 0.5 : star;
+	return Math.max(MIN, value);
 }
 
 export function StarInput({
