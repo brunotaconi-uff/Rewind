@@ -33,14 +33,22 @@ export interface AlbumReview {
 	/** Data ISO (ex.: "2026-10-05T14:30:00.000Z"). */
 	createdAt: string;
 	user: ReviewAuthor;
+	/** 6.3: total de curtidas e se o usuário logado curtiu. */
+	likesCount: number;
+	likedByMe: boolean;
 }
 
-/** Resenhas do álbum, das mais recentes para as mais antigas. */
+/**
+ * Resenhas do álbum, das mais recentes para as mais antigas.
+ * Com o token, cada resenha diz se o usuário logado curtiu (likedByMe).
+ */
 export async function getAlbumReviews(
 	externalId: string,
+	token?: string,
 ): Promise<AlbumReview[]> {
-	const response = await apiGet<DataResponse<AlbumReview[]>>(
+	const response = await apiRequest<DataResponse<AlbumReview[]>>(
 		`/albums/${encodeURIComponent(externalId)}/reviews`,
+		{ token },
 	);
 	return response.data;
 }
@@ -104,6 +112,45 @@ export async function updateReview(
 	const response = await apiRequest<DataResponse<SavedReview>>(
 		`${reviewsPath(externalId)}/${encodeURIComponent(reviewId)}`,
 		{ method: "PATCH", body: input, token },
+	);
+	return response.data;
+}
+
+/** 6.3: estado da curtida depois de curtir ou descurtir. */
+export interface LikeSummary {
+	reviewId: string;
+	likesCount: number;
+	likedByMe: boolean;
+}
+
+const likePath = (reviewId: string) =>
+	`/reviews/${encodeURIComponent(reviewId)}/like`;
+
+/** Curte a atividade (nota ou resenha) de outra pessoa. */
+export async function likeReview(
+	token: string,
+	reviewId: string,
+): Promise<LikeSummary> {
+	const response = await apiRequest<DataResponse<LikeSummary>>(
+		likePath(reviewId),
+		{
+			method: "POST",
+			token,
+		},
+	);
+	return response.data;
+}
+
+export async function unlikeReview(
+	token: string,
+	reviewId: string,
+): Promise<LikeSummary> {
+	const response = await apiRequest<DataResponse<LikeSummary>>(
+		likePath(reviewId),
+		{
+			method: "DELETE",
+			token,
+		},
 	);
 	return response.data;
 }
