@@ -305,6 +305,7 @@ test("cria, edita e consulta avaliações", async () => {
 			rating: 5,
 			content: "Excelente",
 			createdAt: createdAt.toISOString(),
+			albumRating: { albumId: "302127", averageRating: 5, ratingsCount: 1 },
 		},
 	);
 
@@ -381,4 +382,150 @@ test("cadastro e login recusam dados inválidos com erros padronizados", async (
 	const noToken = await fetch(`${baseUrl}/users/me`);
 	assert.equal(noToken.status, 401);
 	assert.equal(await errorCode(noToken), "UNAUTHORIZED");
+});
+
+// 5.4: regras da avaliação (critérios de aceite do card).
+test("avaliação: nota obrigatória, álbum gravado na primeira avaliação e uma por usuário", async () => {
+	const login = await fetch(`${baseUrl}/users/login`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({
+			email: "ana@example.test",
+			password: "senha-segura",
+		}),
+	});
+	const { token } = (await login.json()) as { token: string };
+	const postReview = (externalId: string, body: unknown) =>
+		fetch(`${baseUrl}/albums/${externalId}/reviews`, {
+			method: "POST",
+			headers: {
+				authorization: `Bearer ${token}`,
+				"content-type": "application/json",
+			},
+			body: JSON.stringify(body),
+		});
+	const errorOf = async (response: Response) =>
+		((await response.json()) as { error: { code: string; message: string } })
+			.error;
+
+	// B3: resenha sem nota é recusada com mensagem própria.
+	const withoutRating = await postReview("302127", { content: "Só o texto" });
+	assert.equal(withoutRating.status, 400);
+	assert.deepEqual(await errorOf(withoutRating), {
+		code: "VALIDATION_ERROR",
+		message: "Dê uma nota para publicar a resenha.",
+	});
+
+	const invalidRating = await postReview("302127", { rating: 6 });
+	assert.equal(invalidRating.status, 400);
+
+	const belowMinimum = await postReview("302127", { rating: 0.5 });
+	assert.equal(belowMinimum.status, 400);
+
+	// Só a nota é aceita; a resenha é opcional.
+	const onlyRating = await postReview("302127", { rating: 3 });
+	assert.equal(onlyRating.status, 201);
+	const onlyRatingBody = (await onlyRating.json()) as {
+		data: {
+			rating: number;
+			content: string | null;
+			albumRating: { averageRating: number };
+		};
+	};
+	assert.equal(onlyRatingBody.data.rating, 3);
+	assert.equal(onlyRatingBody.data.content, null);
+	// B5: a resposta já traz a média recalculada.
+	assert.equal(onlyRatingBody.data.albumRating.averageRating, 3);
+
+	// B4: álbum que ainda não está no banco é gravado com título, capa e artistas.
+	const albumMethods = {
+		findUnique: prisma.album.findUnique,
+		create: prisma.album.create,
+	};
+	const originalGetAlbum = fakeProvider.getAlbum;
+	let savedAlbum: { title: string; coverUrl: string | null } | undefined;
+	Object.assign(prisma.album, {
+		findUnique: async () => null,
+		create: async ({
+			data,
+		}: {
+			data: { title: string; coverUrl: string | null };
+		}) => {
+			savedAlbum = data;
+			return { id: albumId };
+		},
+	});
+	fakeProvider.getAlbum = async (externalId) => ({
+		externalId,
+		title: "Random Access Memories",
+		coverUrl: "https://example.test/ram.jpg",
+		releaseYear: 2013,
+		totalTracks: 13,
+		artists: [{ externalId: "27", name: "Daft Punk", imageUrl: null }],
+		releaseDate: "2013-05-17",
+		durationMs: 4_464_000,
+		tracks: [],
+	});
+	try {
+		const newAlbum = await postReview("6575789", {
+			rating: 4,
+			content: "Ótimo",
+		});
+		assert.equal(newAlbum.status, 201);
+		assert.equal(savedAlbum?.title, "Random Access Memories");
+		assert.equal(savedAlbum?.coverUrl, "https://example.test/ram.jpg");
+	} finally {
+		Object.assign(prisma.album, albumMethods);
+		fakeProvider.getAlbum = originalGetAlbum;
+	}
+
+	// B1: segunda avaliação do mesmo álbum pelo mesmo usuário é recusada.
+	const reviewCreate = prisma.review.create;
+	Object.assign(prisma.review, {
+		create: async () => {
+			throw Object.assign(new Error("Unique constraint failed"), {
+				code: "P2002",
+			});
+		},
+	});
+	try {
+		const duplicated = await postReview("302127", { rating: 2 });
+		assert.equal(duplicated.status, 409);
+		assert.equal((await errorOf(duplicated)).code, "CONFLICT");
+	} finally {
+		prisma.review.create = reviewCreate;
+	}
+
+	// F4 usa esta rota para abrir o modal preenchido.
+	const myReviewWithoutLogin = await fetch(
+		`${baseUrl}/albums/302127/reviews/me`,
+	);
+	assert.equal(myReviewWithoutLogin.status, 401);
+
+	const reviewFindFirst = prisma.review.findFirst;
+	const getMyReview = async () => {
+		const response = await fetch(`${baseUrl}/albums/302127/reviews/me`, {
+			headers: { authorization: `Bearer ${token}` },
+		});
+		assert.equal(response.status, 200);
+		return (
+			(await response.json()) as {
+				data: { rating: number; content: string | null } | null;
+			}
+		).data;
+	};
+	try {
+		Object.assign(prisma.review, { findFirst: async () => review });
+		assert.deepEqual(await getMyReview(), {
+			id: review.id,
+			rating: review.rating,
+			content: review.content,
+			createdAt: createdAt.toISOString(),
+		});
+
+		Object.assign(prisma.review, { findFirst: async () => null });
+		assert.equal(await getMyReview(), null);
+	} finally {
+		prisma.review.findFirst = reviewFindFirst;
+	}
 });

@@ -1,3 +1,137 @@
 .body {
-  min-height: 380px;
+	min-height: 380px;
+	padding: 0 10px;
+}
+
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.album {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.cover {
+	width: 88px;
+	height: 88px;
+	flex-shrink: 0;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.albumInfo {
+	min-width: 0;
+}
+
+.albumTitle {
+	font-size: 18px;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.albumArtist,
+.albumYear {
+	font-size: 14px;
+	color: var(--color-text-muted);
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.label {
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.textarea {
+	width: 100%;
+	padding: 12px 14px;
+	border: 1px solid var(--color-border);
+	border-radius: 10px;
+	background-color: var(--color-surface);
+	color: var(--color-text);
+	font: inherit;
+	font-size: 14px;
+	resize: vertical;
+}
+
+.textarea:focus-visible {
+	outline: 2px solid var(--color-text-muted);
+	outline-offset: 1px;
+}
+
+.counter {
+	align-self: flex-end;
+	font-size: 12px;
+	color: var(--color-text-muted);
+}
+
+.error {
+	font-size: 14px;
+	color: var(--color-favorite);
+}
+
+.status {
+	color: var(--color-text-muted);
+}
+
+.login {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 16px;
+}
+
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+}
+
+.primary,
+.secondary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 20px;
+	border: none;
+	border-radius: 8px;
+	font-family: var(--font-poppins), sans-serif;
+	font-size: 14px;
+	cursor: pointer;
+	transition:
+		background-color 0.15s ease,
+		opacity 0.15s ease;
+}
+
+.primary {
+	background-color: var(--color-text);
+	color: var(--color-surface);
+}
+
+.primary:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.secondary {
+	background-color: var(--color-input);
+	color: var(--color-text);
+}
+
+.secondary:hover {
+	background-color: var(--color-border);
+}
+
+.primary:focus-visible,
+.secondary:focus-visible {
+	outline: 2px solid var(--color-text-muted);
+	outline-offset: 2px;
 }
