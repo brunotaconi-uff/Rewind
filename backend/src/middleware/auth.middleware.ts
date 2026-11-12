@@ -4,27 +4,58 @@ import { getJwtSecret } from "../config/env";
 import { AppError } from "../errors/AppError";
 
 export interface AuthRequest extends Request {
-  userId?: string;
+	userId?: string;
 }
 
-export function authMiddleware(req: AuthRequest, _res: Response, next: NextFunction) {
-  const [scheme, token] = req.headers.authorization?.split(" ") ?? [];
-  
-  if (scheme?.toLowerCase() !== "bearer" || !token) {
-    throw AppError.unauthorized("Token não informado.");
-  }
+function readBearerToken(req: Request): string | null {
+	const [scheme, token] = req.headers.authorization?.split(" ") ?? [];
+	return scheme?.toLowerCase() === "bearer" && token ? token : null;
+}
 
-  let decoded: string | jwt.JwtPayload;
-  try {
-    decoded = jwt.verify(token, getJwtSecret());
-  } catch {
-    throw AppError.unauthorized("Sessão inválida ou expirada. Faça login novamente.");
-  }
+/** userId do token, ou null se o token for inválido ou estiver vencido. */
+function readUserId(token: string): string | null {
+	try {
+		const decoded = jwt.verify(token, getJwtSecret());
+		return typeof decoded === "object" && typeof decoded.userId === "string"
+			? decoded.userId
+			: null;
+	} catch {
+		return null;
+	}
+}
 
-  if (typeof decoded !== "object" || typeof decoded.userId !== "string") {
-    throw AppError.unauthorized("Sessão inválida. Faça login novamente.");
-  }
+export function authMiddleware(
+	req: AuthRequest,
+	_res: Response,
+	next: NextFunction,
+) {
+	const token = readBearerToken(req);
+	if (!token) {
+		throw AppError.unauthorized("Token não informado.");
+	}
 
-  req.userId = decoded.userId;
-  next();
+	const userId = readUserId(token);
+	if (!userId) {
+		throw AppError.unauthorized(
+			"Sessão inválida ou expirada. Faça login novamente.",
+		);
+	}
+
+	req.userId = userId;
+	next();
+}
+
+/**
+ * Para rotas públicas que mudam um detalhe quando há login (ex.: 6.3, "curti").
+ * Sem token, ou com token inválido, segue sem userId em vez de responder 401.
+ */
+export function optionalAuthMiddleware(
+	req: AuthRequest,
+	_res: Response,
+	next: NextFunction,
+) {
+	const token = readBearerToken(req);
+	const userId = token ? readUserId(token) : null;
+	if (userId) req.userId = userId;
+	next();
 }
