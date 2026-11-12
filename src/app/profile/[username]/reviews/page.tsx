@@ -3,6 +3,7 @@ import { ProfileFeed } from "@/components/ProfileFeed/ProfileFeed";
 import { EmptyState } from "@/components/Section/Section";
 import { getErrorCode } from "@/lib/api/client";
 import { getUserFeed, type FeedItem } from "@/lib/api/user";
+import { getServerAccessToken } from "@/lib/auth";
 
 // A rota do feed aceita no máximo 100 itens; aqui só ficam os que têm texto.
 const FEED_LIMIT = 100;
@@ -18,7 +19,7 @@ export default async function ReviewsTab({ params }: ReviewsTabProps) {
 
   let items: FeedItem[];
   try {
-    items = await getUserFeed(username, FEED_LIMIT);
+    items = await getUserFeed(username, FEED_LIMIT, await getServerAccessToken());
   } catch (error) {
     return <ApiErrorMessage code={getErrorCode(error)} title="Não foi possível carregar as resenhas" />;
   }
