@@ -99,3 +99,8 @@
   font-size: 13px;
   color: var(--color-text-muted);
 }
+
+.actions {
+  display: flex;
+  margin-left: -10px; 
+}

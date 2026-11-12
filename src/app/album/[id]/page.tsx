@@ -6,6 +6,7 @@ import { TrackList } from "@/components/TrackList/TrackList";
 import { getErrorCode } from "@/lib/api/client";
 import { getAlbum, type Album } from "@/lib/api/music";
 import { getAlbumRating, getAlbumReviews } from "@/lib/api/review";
+import { getServerAccessToken } from "@/lib/auth";
 import styles from "./page.module.css";
 
 interface AlbumDetailPageProps {
@@ -18,7 +19,8 @@ const AlbumDetailPage = async ({ params }: AlbumDetailPageProps) => {
 	const { id } = await params;
 
 	const ratingPromise = getAlbumRating(id).catch(() => null);
-  const reviewsPromise = getAlbumReviews(id).catch(() => null);
+	const token = await getServerAccessToken();
+	const reviewsPromise = getAlbumReviews(id, token).catch(() => null);
 
 	let album: Album;
 	try {
@@ -51,7 +53,7 @@ const AlbumDetailPage = async ({ params }: AlbumDetailPageProps) => {
 						<RatingCard album={album} rating={rating} />
 					</aside>
 				</div>
-        <ReviewList reviews={reviews} />
+				<ReviewList reviews={reviews} />
 			</div>
 		</main>
 	);
