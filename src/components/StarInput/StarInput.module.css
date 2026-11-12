@@ -1,0 +1,40 @@
+.wrapper {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.stars {
+	display: inline-flex;
+	gap: 4px;
+	border-radius: 6px;
+}
+
+.stars:focus-visible {
+	outline: 2px solid var(--color-text-muted);
+	outline-offset: 4px;
+}
+
+.star {
+	display: inline-flex;
+	cursor: pointer;
+}
+
+.stars[aria-disabled="true"] .star {
+	cursor: default;
+}
+
+.empty {
+	fill: var(--color-border);
+}
+
+.filled {
+	fill: var(--color-accent);
+}
+
+.value {
+	min-width: 2ch;
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--color-text);
+}
