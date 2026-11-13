@@ -42,6 +42,8 @@ function roundRating(average: unknown): number | null {
 		: Math.round(Number(average) * 10) / 10;
 }
 
+const MAX_BATCH_RATINGS = 50;
+
 function readRating(value: unknown): number {
 	if (
 		typeof value !== "number" ||
@@ -149,6 +151,54 @@ export function createAlbumRouter(
 				];
 			}),
 		});
+	});
+
+	// Médias de vários álbuns de uma vez, para os cards das listas (?ids=1,2,3).
+	router.get("/ratings", async (req, res) => {
+		const raw = typeof req.query.ids === "string" ? req.query.ids : "";
+		const ids = [
+			...new Set(
+				raw
+					.split(",")
+					.map((id) => id.trim())
+					.filter(Boolean),
+			),
+		];
+		if (ids.length > MAX_BATCH_RATINGS) {
+			throw AppError.validation(
+				`Informe no máximo ${MAX_BATCH_RATINGS} álbuns por vez.`,
+			);
+		}
+		const result: Record<
+			string,
+			{ averageRating: number | null; ratingsCount: number }
+		> = {};
+		if (ids.length === 0) {
+			res.json({ data: result });
+			return;
+		}
+		const albums = await prisma.album.findMany({
+			where: { externalId: { in: ids } },
+			select: { id: true, externalId: true },
+		});
+		const groups = albums.length
+			? await prisma.review.groupBy({
+					by: ["albumId"],
+					where: { albumId: { in: albums.map((album) => album.id) } },
+					_count: { albumId: true },
+					_avg: { rating: true },
+				})
+			: [];
+		const byAlbumId = new Map(groups.map((group) => [group.albumId, group]));
+		for (const album of albums) {
+			const group = byAlbumId.get(album.id);
+			if (!group) continue;
+			result[album.externalId] = {
+				averageRating: roundRating(group._avg.rating),
+				ratingsCount: group._count.albumId,
+			};
+		}
+		res.json({ data: result });
 	});
 
 	router.post("/:id/reviews", authMiddleware, async (req: AuthRequest, res) => {

@@ -808,6 +808,31 @@ describe("GET /albums/popular", () => {
   });
 });
 
+describe("GET /albums/ratings", () => {
+  test("200 com objeto vazio quando não há ids", async () => {
+    assert.deepEqual((await api("/albums/ratings")).json, { data: {} });
+  });
+
+  test("400 com mais de 50 ids", async () => {
+    const ids = Array.from({ length: 51 }, (_, i) => i).join(",");
+    assert.equal((await api(`/albums/ratings?ids=${ids}`)).status, 400);
+  });
+
+  test("200 só traz álbuns que têm avaliação", async () => {
+    stub(prisma.album, "findMany", async () => [
+      { id: ALBUM_ID, externalId: "1" },
+      { id: REVIEW_ID, externalId: "2" },
+    ]);
+    stub(prisma.review, "groupBy", async () => [
+      { albumId: ALBUM_ID, _count: { albumId: 3 }, _avg: { rating: "3.66" } },
+    ]);
+
+    const res = await api("/albums/ratings?ids=1,2,3");
+
+    assert.deepEqual(res.json, { data: { "1": { averageRating: 3.7, ratingsCount: 3 } } });
+  });
+});
+
 describe("seguir com id inválido", () => {
   test("404 em vez de 500 quando o id não é uuid", async () => {
     stub(prisma.user, "findUnique", async () => { throw new Error("não deveria consultar"); });
