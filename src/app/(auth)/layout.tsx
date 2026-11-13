@@ -14,10 +14,11 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </div>
       </div>
       <div className={styles.rightColumn}>
-        <Image 
-          src="/mosaico.png" 
+        <Image
+          src="/mosaico.png"
           alt="Mosaico de álbuns musicais"
           fill
+          sizes="(min-width: 768px) 50vw, 100vw"
           className={styles.backgroundImage}
           priority
         />
