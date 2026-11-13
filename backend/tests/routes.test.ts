@@ -781,6 +781,33 @@ describe("DELETE /albums/:id/reviews/:reviewId", () => {
   });
 });
 
+describe("GET /albums/popular", () => {
+  test("400 com limite inválido", async () => {
+    assert.equal((await api("/albums/popular?limit=0")).status, 400);
+    assert.equal((await api("/albums/popular?limit=abc")).status, 400);
+  });
+
+  test("200 devolve os mais avaliados na ordem do ranking, com média", async () => {
+    const OTHER_ID = "44444444-4444-4444-8444-444444444444";
+    stub(prisma.review, "groupBy", async () => [
+      { albumId: OTHER_ID, _count: { albumId: 5 }, _avg: { rating: "4.25" } },
+      { albumId: ALBUM_ID, _count: { albumId: 2 }, _avg: { rating: "3" } },
+    ]);
+    stub(prisma.album, "findMany", async () => [
+      { id: ALBUM_ID, ...ALBUM_ROW },
+      { id: OTHER_ID, ...ALBUM_ROW, externalId: "999", title: "Outro" },
+    ]);
+
+    const res = await api("/albums/popular?limit=2");
+
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.json.data.map((a: any) => a.externalId), ["999", ALBUM_ROW.externalId]);
+    assert.equal(res.json.data[0].averageRating, 4.3);
+    assert.equal(res.json.data[0].ratingsCount, 5);
+    assert.equal("id" in res.json.data[0], false);
+  });
+});
+
 describe("seguir com id inválido", () => {
   test("404 em vez de 500 quando o id não é uuid", async () => {
     stub(prisma.user, "findUnique", async () => { throw new Error("não deveria consultar"); });

@@ -8,6 +8,10 @@ import {
 	optionalAuthMiddleware,
 } from "../middleware/auth.middleware";
 import { ensureAlbum, isUniqueViolation } from "../services/album.service";
+import {
+	albumSummarySelect,
+	toAlbumSummary,
+} from "../services/favorite.service";
 import { likesSelect, withLikeFields } from "../services/like.service";
 import { getMusicProvider } from "../services/music/music.provider";
 import type { MusicProvider } from "../services/music/music.types";
@@ -21,6 +25,21 @@ function readAlbumId(value: unknown): string {
 function readReviewId(value: unknown): string {
 	if (!isUuid(value)) throw AppError.notFound("Avaliação não encontrada.");
 	return value;
+}
+
+function readLimit(value: unknown, fallback: number, max: number): number {
+	if (value === undefined) return fallback;
+	const limit = Number(value);
+	if (!Number.isInteger(limit) || limit < 1 || limit > max) {
+		throw AppError.validation(`O limite deve ser um inteiro entre 1 e ${max}.`);
+	}
+	return limit;
+}
+
+function roundRating(average: unknown): number | null {
+	return average === null || average === undefined
+		? null
+		: Math.round(Number(average) * 10) / 10;
 }
 
 function readRating(value: unknown): number {
@@ -81,11 +100,9 @@ async function getAlbumRating(externalId: string) {
 		_avg: { rating: true },
 		_count: { _all: true },
 	});
-	const average = result._avg.rating;
 	return {
 		albumId: externalId,
-		averageRating:
-			average === null ? null : Math.round(Number(average) * 10) / 10,
+		averageRating: roundRating(result._avg.rating),
 		ratingsCount: result._count._all,
 	};
 }
@@ -94,6 +111,45 @@ export function createAlbumRouter(
 	musicProvider: MusicProvider = getMusicProvider(),
 ) {
 	const router = Router();
+
+	// Álbuns mais avaliados no Rewind (Home), com a média de cada um.
+	router.get("/popular", async (req, res) => {
+		const limit = readLimit(req.query.limit, 12, 50);
+		const groups = await prisma.review.groupBy({
+			by: ["albumId"],
+			_count: { albumId: true },
+			_avg: { rating: true },
+			orderBy: [{ _count: { albumId: "desc" } }, { _avg: { rating: "desc" } }],
+			take: limit,
+		});
+		const albums = await prisma.album.findMany({
+			where: { id: { in: groups.map((group) => group.albumId) } },
+			select: { id: true, ...albumSummarySelect },
+		});
+		const byId = new Map(albums.map((album) => [album.id, album]));
+		res.json({
+			data: groups.flatMap((group) => {
+				const album = byId.get(group.albumId);
+				if (!album) return [];
+				const { externalId, title, coverUrl, releaseYear, totalTracks, artists } =
+					album;
+				return [
+					{
+						...toAlbumSummary({
+							externalId,
+							title,
+							coverUrl,
+							releaseYear,
+							totalTracks,
+							artists,
+						}),
+						averageRating: roundRating(group._avg.rating),
+						ratingsCount: group._count.albumId,
+					},
+				];
+			}),
+		});
+	});
 
 	router.post("/:id/reviews", authMiddleware, async (req: AuthRequest, res) => {
 		const externalId = readAlbumId(req.params.id);
