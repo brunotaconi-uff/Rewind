@@ -93,6 +93,13 @@ async function api(
   return { status: res.status, headers: res.headers, json: text ? JSON.parse(text) : null };
 }
 
+// Linhas do Prisma sem curtidas (6.3): o select de likes vem junto em feed e resenhas.
+const NO_LIKES = { _count: { likes: 0 }, likes: [] };
+
+function stubAlbumRating() {
+  stub(prisma.review, "aggregate", async () => ({ _avg: { rating: null }, _count: { _all: 0 } }));
+}
+
 function stubProfileStats() {
   stub(prisma.review, "findMany", async () => [{ albumId: "a" }, { albumId: "b" }]);
   stub(prisma.review, "count", async () => 7);
@@ -146,19 +153,19 @@ describe("authMiddleware", () => {
   test("401 sem header Authorization", async () => {
     const res = await api("/users/me");
     assert.equal(res.status, 401);
-    assert.equal(res.json.error, "Token não informado");
+    assert.deepEqual(res.json.error, { code: "UNAUTHORIZED", message: "Token não informado." });
   });
 
   test("401 com header sem token ('Bearer' sozinho)", async () => {
     const res = await api("/users/me", { headers: { authorization: "Bearer" } });
     assert.equal(res.status, 401);
-    assert.equal(res.json.error, "Token inválido");
+    assert.equal(res.json.error.message, "Token não informado.");
   });
 
   test("401 com token malformado", async () => {
     const res = await api("/users/me", { token: "isso-nao-e-um-jwt" });
     assert.equal(res.status, 401);
-    assert.equal(res.json.error, "Token inválido ou expirado");
+    assert.equal(res.json.error.message, "Sessão inválida ou expirada. Faça login novamente.");
   });
 
   test("401 com token expirado", async () => {
@@ -176,7 +183,7 @@ describe("authMiddleware", () => {
   test("401 com token válido mas sem userId no payload", async () => {
     const res = await api("/users/me", { token: jwt.sign({ foo: "bar" }, SECRET) });
     assert.equal(res.status, 401);
-    assert.equal(res.json.error, "Token inválido");
+    assert.equal(res.json.error.code, "UNAUTHORIZED");
   });
 
   test("rotas protegidas exigem token", async () => {
@@ -208,23 +215,33 @@ describe("POST /users", () => {
       delete body[missing];
       const res = await api("/users", { method: "POST", body });
       assert.equal(res.status, 400);
-      assert.match(res.json.error, /obrigatórios/);
+      assert.equal(res.json.error.code, "VALIDATION_ERROR");
     });
   }
 
-  test("400 quando username ou email já existe", async () => {
+  test("409 quando o e-mail já existe", async () => {
     stub(prisma.user, "findFirst", async () => makeUser());
     const res = await api("/users", { method: "POST", body: valid });
-    assert.equal(res.status, 400);
-    assert.equal(res.json.error, "Usuário com esse username ou email já existe");
+    assert.equal(res.status, 409);
+    assert.equal(res.json.error.message, "Já existe um usuário cadastrado com este e-mail.");
+  });
+
+  test("409 quando o nome de usuário já existe", async () => {
+    stub(prisma.user, "findFirst", async () => makeUser({ email: "outra@example.test" }));
+    const res = await api("/users", { method: "POST", body: valid });
+    assert.equal(res.status, 409);
+    assert.equal(res.json.error.message, "Esse nome de usuário já está em uso.");
   });
 
   test("201 grava a senha criptografada e não devolve o hash", async () => {
     let saved: any;
+    let select: any;
     stub(prisma.user, "findFirst", async () => null);
-    stub(prisma.user, "create", async ({ data }: any) => {
-      saved = data;
-      return makeUser({ ...data });
+    stub(prisma.user, "create", async (args: any) => {
+      saved = args.data;
+      select = args.select;
+      const { passwordHash: _hash, ...visible } = makeUser({ ...args.data });
+      return visible;
     });
 
     const res = await api("/users", { method: "POST", body: { ...valid, bio: "Oi", city: "Niterói" } });
@@ -236,13 +253,14 @@ describe("POST /users", () => {
     assert.equal(res.json.bio, "Oi");
     assert.equal("passwordHash" in res.json, false);
     assert.equal("password" in res.json, false);
+    assert.equal(select.passwordHash, undefined);
   });
 
   test("500 quando o banco falha", async () => {
     stub(prisma.user, "findFirst", async () => { throw new Error("db caiu"); });
     const res = await api("/users", { method: "POST", body: valid });
     assert.equal(res.status, 500);
-    assert.equal(res.json.error, "Erro ao criar usuário");
+    assert.deepEqual(res.json.error, { code: "INTERNAL_ERROR", message: "Erro interno do servidor." });
   });
 });
 
@@ -259,14 +277,14 @@ describe("POST /users/login", () => {
     stub(prisma.user, "findUnique", async () => null);
     const res = await api("/users/login", { method: "POST", body: { email: "x@x.com", password: PASSWORD } });
     assert.equal(res.status, 401);
-    assert.equal(res.json.error, "Credenciais inválidas");
+    assert.equal(res.json.error.message, "E-mail ou senha incorretos.");
   });
 
   test("401 quando a senha está errada (mesma mensagem do email inexistente)", async () => {
     stub(prisma.user, "findUnique", async () => makeUser());
     const res = await api("/users/login", { method: "POST", body: { email: "ana@example.test", password: "errada" } });
     assert.equal(res.status, 401);
-    assert.equal(res.json.error, "Credenciais inválidas");
+    assert.equal(res.json.error.message, "E-mail ou senha incorretos.");
   });
 
   test("200 devolve token e usuário sem passwordHash", async () => {
@@ -297,7 +315,7 @@ describe("POST /users/logout", () => {
   test("200 com token válido", async () => {
     const res = await api("/users/logout", { method: "POST", token: tokenFor() });
     assert.equal(res.status, 200);
-    assert.equal(res.json.message, "Logout realizado com sucesso");
+    assert.equal(res.json.message, "Logout realizado com sucesso.");
   });
 });
 
@@ -316,28 +334,37 @@ describe("GET /users", () => {
     stub(prisma.user, "findMany", async () => { throw new Error("db caiu"); });
     const res = await api("/users");
     assert.equal(res.status, 500);
-    assert.equal(res.json.error, "Erro ao buscar usuários");
+    assert.equal(res.json.error.code, "INTERNAL_ERROR");
   });
 
-  // BUG ENCONTRADO: getAllUsersService devolve o registro inteiro, incluindo passwordHash.
-  test("não expõe passwordHash", { todo: "GET /users vaza passwordHash e email de todos" }, async () => {
-    stub(prisma.user, "findMany", async () => [makeUser()]);
-    const res = await api("/users");
-    assert.equal("passwordHash" in res.json[0], false);
+  // Corrigido depois do teste: a consulta só pede campos públicos.
+  test("não pede passwordHash nem email ao banco", async () => {
+    let select: any;
+    stub(prisma.user, "findMany", async (args: any) => { select = args.select; return []; });
+    await api("/users");
+    assert.equal(select.passwordHash, undefined);
+    assert.equal(select.email, undefined);
   });
 });
 
 describe("GET /users/me", () => {
   test("200 devolve o usuário logado sem passwordHash", async () => {
-    stub(prisma.user, "findUnique", async ({ where }: any) => (where.id === USER_ID ? makeUser() : null));
+    let select: any;
+    stub(prisma.user, "findUnique", async (args: any) => {
+      select = args.select;
+      if (args.where.id !== USER_ID) return null;
+      const { passwordHash: _hash, ...visible } = makeUser();
+      return visible;
+    });
     const res = await api("/users/me", { token: tokenFor() });
     assert.equal(res.status, 200);
     assert.equal(res.json.email, "ana@example.test");
     assert.equal("passwordHash" in res.json, false);
+    assert.equal(select.passwordHash, undefined);
   });
 
-  // BUG ENCONTRADO: o service lança Error (não devolve null), então o controller cai no catch e responde 500.
-  test("404 quando o usuário do token foi apagado", { todo: "hoje responde 500" }, async () => {
+  // Corrigido depois do teste: o service lança AppError.notFound.
+  test("404 quando o usuário do token foi apagado", async () => {
     stub(prisma.user, "findUnique", async () => null);
     const res = await api("/users/me", { token: tokenFor() });
     assert.equal(res.status, 404);
@@ -527,8 +554,8 @@ describe("GET /users/:username/feed", () => {
   test("converte nota para número, zera resenha em branco e achata os artistas", async () => {
     stub(prisma.user, "findUnique", async () => ({ id: USER_ID }));
     stub(prisma.review, "findMany", async () => [
-      { id: "r1", rating: "4.5", content: "  ", createdAt: CREATED_AT, album: ALBUM_ROW },
-      { id: "r2", rating: "3", content: "Bom", createdAt: CREATED_AT, album: ALBUM_ROW },
+      { id: "r1", rating: "4.5", content: "  ", createdAt: CREATED_AT, album: ALBUM_ROW, ...NO_LIKES },
+      { id: "r2", rating: "3", content: "Bom", createdAt: CREATED_AT, album: ALBUM_ROW, ...NO_LIKES },
     ]);
 
     const res = await api("/users/ana/feed");
@@ -599,8 +626,8 @@ describe("POST /albums/:id/reviews", () => {
   const post = (body: unknown) =>
     api(`/albums/${EXTERNAL_ALBUM}/reviews`, { method: "POST", token: tokenFor(), body });
 
-  test("400 para notas fora das regras (0,5 a 5, de 0,5 em 0,5)", async () => {
-    for (const rating of [0, 0.4, 5.5, 6, -1, 4.3, "4", null, undefined]) {
+  test("400 para notas fora das regras (1 a 5, de 0,5 em 0,5)", async () => {
+    for (const rating of [0, 0.4, 0.5, 5.5, 6, -1, 4.3, "4", null, undefined]) {
       const res = await post({ rating });
       assert.equal(res.status, 400, `rating ${String(rating)} deveria ser recusado`);
     }
@@ -611,8 +638,9 @@ describe("POST /albums/:id/reviews", () => {
     assert.equal((await post({ rating: 4, content: "a".repeat(5001) })).status, 400);
   });
 
-  test("404 quando o álbum não está no banco", async () => {
+  test("404 quando o álbum não existe na API de música", async () => {
     stub(prisma.album, "findUnique", async () => null);
+    provider = { getAlbum: async () => { throw AppError.notFound("Álbum não encontrado."); } };
     const res = await post({ rating: 4 });
     assert.equal(res.status, 404);
     assert.equal(res.json.error.message, "Álbum não encontrado.");
@@ -633,8 +661,9 @@ describe("POST /albums/:id/reviews", () => {
       data = args.data;
       return { id: REVIEW_ID, rating: args.data.rating, content: args.data.content, createdAt: CREATED_AT };
     });
+    stubAlbumRating();
 
-    for (const rating of [0.5, 2.5, 5]) {
+    for (const rating of [1, 2.5, 5]) {
       const res = await post({ rating });
       assert.equal(res.status, 201, `rating ${rating} deveria ser aceito`);
       assert.equal(res.json.data.rating, rating);
@@ -650,6 +679,7 @@ describe("POST /albums/:id/reviews", () => {
       saved.push(data.content);
       return { id: REVIEW_ID, rating: data.rating, content: data.content, createdAt: CREATED_AT };
     });
+    stubAlbumRating();
 
     await post({ rating: 4, content: "  Ótimo  " });
     await post({ rating: 4, content: "   " });
@@ -687,6 +717,7 @@ describe("PATCH /albums/:id/reviews/:reviewId", () => {
       data = args.data;
       return { id: REVIEW_ID, rating: 4, content: null, createdAt: CREATED_AT };
     });
+    stubAlbumRating();
 
     const res = await patch({ content: "" });
 
@@ -723,6 +754,7 @@ describe("GET /albums/:id/reviews", () => {
       return [{
         id: REVIEW_ID, rating: "4.5", content: "Boa", createdAt: CREATED_AT,
         user: { id: USER_ID, name: "Ana", username: "ana", avatarUrl: null },
+        ...NO_LIKES,
       }];
     });
 
