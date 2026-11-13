@@ -10,7 +10,7 @@ interface ReviewButtonProps {
   album: AlbumSummary;
 }
 
-/** Botão "Fazer review" da tela do álbum: abre o mesmo modal de review da home. */
+/** Botão "Avaliar" da tela do álbum: abre o mesmo modal de avaliação da home. */
 export function ReviewButton({ album }: ReviewButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -18,7 +18,7 @@ export function ReviewButton({ album }: ReviewButtonProps) {
     <>
       <button type="button" className={styles.button} onClick={() => setOpen(true)}>
         <ReviewIcon size={16} />
-        Fazer review
+        Avaliar
       </button>
       <ReviewModal album={open ? album : null} onClose={() => setOpen(false)} />
     </>

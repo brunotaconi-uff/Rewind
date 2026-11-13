@@ -154,3 +154,17 @@ export async function unlikeReview(
 	);
 	return response.data;
 }
+
+/** Apaga a avaliação do usuário (nota e resenha) e devolve a média recalculada. */
+export async function deleteReview(
+	token: string,
+	externalId: string,
+	reviewId: string,
+): Promise<AlbumRating> {
+	const response = await apiRequest<DataResponse<{ albumRating: AlbumRating }>>(
+		`${reviewsPath(externalId)}/${encodeURIComponent(reviewId)}`,
+		{ method: "DELETE", token },
+	);
+	return response.data.albumRating;
+}
+
