@@ -746,6 +746,16 @@ describe("GET /albums/:id/rating", () => {
   });
 });
 
+describe("seguir com id inválido", () => {
+  test("404 em vez de 500 quando o id não é uuid", async () => {
+    stub(prisma.user, "findUnique", async () => { throw new Error("não deveria consultar"); });
+    for (const method of ["GET", "POST", "DELETE"]) {
+      const res = await api("/users/abc/follow", { method, token: tokenFor() });
+      assert.equal(res.status, 404, method);
+    }
+  });
+});
+
 describe("GET /albums/:id/reviews", () => {
   test("200 só consulta resenhas com texto, da mais recente para a mais antiga", async () => {
     let args: any;
