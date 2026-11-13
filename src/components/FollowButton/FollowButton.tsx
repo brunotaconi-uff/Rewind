@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { loginHref } from "@/lib/callbackUrl";
 import { useEffect, useState } from "react";
 import { ApiError, getErrorCode, type ApiErrorCode } from "@/lib/api/client";
 import { followUser, getFollowStatus, unfollowUser, type UserProfile } from "@/lib/api/user";
@@ -10,6 +11,7 @@ import styles from "./FollowButton.module.css";
 
 export function FollowButton({ profile }: { profile: UserProfile }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [followResult, setFollowResult] = useState<{ key: string; following: boolean } | null>(null);
   const [pending, setPending] = useState(false);
@@ -40,7 +42,7 @@ export function FollowButton({ profile }: { profile: UserProfile }) {
 
   const handleClick = async () => {
     if (!token) {
-      router.push("/login");
+      router.push(loginHref(pathname));
       return;
     }
     if (following === null || pending) return;
@@ -53,7 +55,7 @@ export function FollowButton({ profile }: { profile: UserProfile }) {
       router.refresh();
     } catch (error) {
       setError({ key, code: getErrorCode(error) });
-      if (error instanceof ApiError && error.code === "UNAUTHORIZED") router.push("/login");
+      if (error instanceof ApiError && error.code === "UNAUTHORIZED") router.push(loginHref(pathname));
     } finally {
       setPending(false);
     }

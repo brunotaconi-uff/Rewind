@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { loginHref } from "@/lib/callbackUrl";
 import { useState } from "react";
 import { HeartIcon } from "@/components/icons/icons";
 import { ApiError, getErrorCode } from "@/lib/api/client";
@@ -40,6 +41,7 @@ export function LikeButton({
 	likedByMe,
 }: LikeButtonProps) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const { data: session } = useSession();
 	const [like, setLike] = useState({ likesCount, likedByMe });
 	const [saving, setSaving] = useState(false);
@@ -58,7 +60,7 @@ export function LikeButton({
 	const handleClick = async () => {
 		const token = session?.accessToken;
 		if (!token) {
-			router.push("/login");
+			router.push(loginHref(pathname));
 			return;
 		}
 

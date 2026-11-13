@@ -91,8 +91,35 @@
 
 .actions {
 	display: flex;
+	flex-wrap: wrap;
 	justify-content: flex-end;
 	gap: 12px;
+}
+
+/* Excluir fica à esquerda, longe do "Salvar". */
+.danger {
+	margin-right: auto;
+	padding: 10px 4px;
+	border: none;
+	background: none;
+	color: var(--color-favorite);
+	font-family: var(--font-poppins), sans-serif;
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.danger:hover {
+	text-decoration: underline;
+}
+
+.danger:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.danger:focus-visible {
+	outline: 2px solid var(--color-favorite);
+	outline-offset: 2px;
 }
 
 .primary,

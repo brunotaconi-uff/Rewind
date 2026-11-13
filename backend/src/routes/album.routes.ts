@@ -1,12 +1,17 @@
 import { Router } from "express";
 import { AppError } from "../errors/AppError";
 import { prisma } from "../lib/prisma";
+import { isUuid } from "../lib/uuid";
 import {
 	authMiddleware,
 	AuthRequest,
 	optionalAuthMiddleware,
 } from "../middleware/auth.middleware";
 import { ensureAlbum, isUniqueViolation } from "../services/album.service";
+import {
+	albumSummarySelect,
+	toAlbumSummary,
+} from "../services/favorite.service";
 import { likesSelect, withLikeFields } from "../services/like.service";
 import { getMusicProvider } from "../services/music/music.provider";
 import type { MusicProvider } from "../services/music/music.types";
@@ -16,6 +21,28 @@ function readAlbumId(value: unknown): string {
 		throw AppError.validation("ID de álbum inválido.");
 	return value;
 }
+
+function readReviewId(value: unknown): string {
+	if (!isUuid(value)) throw AppError.notFound("Avaliação não encontrada.");
+	return value;
+}
+
+function readLimit(value: unknown, fallback: number, max: number): number {
+	if (value === undefined) return fallback;
+	const limit = Number(value);
+	if (!Number.isInteger(limit) || limit < 1 || limit > max) {
+		throw AppError.validation(`O limite deve ser um inteiro entre 1 e ${max}.`);
+	}
+	return limit;
+}
+
+function roundRating(average: unknown): number | null {
+	return average === null || average === undefined
+		? null
+		: Math.round(Number(average) * 10) / 10;
+}
+
+const MAX_BATCH_RATINGS = 50;
 
 function readRating(value: unknown): number {
 	if (
@@ -75,11 +102,9 @@ async function getAlbumRating(externalId: string) {
 		_avg: { rating: true },
 		_count: { _all: true },
 	});
-	const average = result._avg.rating;
 	return {
 		albumId: externalId,
-		averageRating:
-			average === null ? null : Math.round(Number(average) * 10) / 10,
+		averageRating: roundRating(result._avg.rating),
 		ratingsCount: result._count._all,
 	};
 }
@@ -88,6 +113,93 @@ export function createAlbumRouter(
 	musicProvider: MusicProvider = getMusicProvider(),
 ) {
 	const router = Router();
+
+	// Álbuns mais avaliados no Rewind (Home), com a média de cada um.
+	router.get("/popular", async (req, res) => {
+		const limit = readLimit(req.query.limit, 12, 50);
+		const groups = await prisma.review.groupBy({
+			by: ["albumId"],
+			_count: { albumId: true },
+			_avg: { rating: true },
+			orderBy: [{ _count: { albumId: "desc" } }, { _avg: { rating: "desc" } }],
+			take: limit,
+		});
+		const albums = await prisma.album.findMany({
+			where: { id: { in: groups.map((group) => group.albumId) } },
+			select: { id: true, ...albumSummarySelect },
+		});
+		const byId = new Map(albums.map((album) => [album.id, album]));
+		res.json({
+			data: groups.flatMap((group) => {
+				const album = byId.get(group.albumId);
+				if (!album) return [];
+				const { externalId, title, coverUrl, releaseYear, totalTracks, artists } =
+					album;
+				return [
+					{
+						...toAlbumSummary({
+							externalId,
+							title,
+							coverUrl,
+							releaseYear,
+							totalTracks,
+							artists,
+						}),
+						averageRating: roundRating(group._avg.rating),
+						ratingsCount: group._count.albumId,
+					},
+				];
+			}),
+		});
+	});
+
+	// Médias de vários álbuns de uma vez, para os cards das listas (?ids=1,2,3).
+	router.get("/ratings", async (req, res) => {
+		const raw = typeof req.query.ids === "string" ? req.query.ids : "";
+		const ids = [
+			...new Set(
+				raw
+					.split(",")
+					.map((id) => id.trim())
+					.filter(Boolean),
+			),
+		];
+		if (ids.length > MAX_BATCH_RATINGS) {
+			throw AppError.validation(
+				`Informe no máximo ${MAX_BATCH_RATINGS} álbuns por vez.`,
+			);
+		}
+		const result: Record<
+			string,
+			{ averageRating: number | null; ratingsCount: number }
+		> = {};
+		if (ids.length === 0) {
+			res.json({ data: result });
+			return;
+		}
+		const albums = await prisma.album.findMany({
+			where: { externalId: { in: ids } },
+			select: { id: true, externalId: true },
+		});
+		const groups = albums.length
+			? await prisma.review.groupBy({
+					by: ["albumId"],
+					where: { albumId: { in: albums.map((album) => album.id) } },
+					_count: { albumId: true },
+					_avg: { rating: true },
+				})
+			: [];
+		const byAlbumId = new Map(groups.map((group) => [group.albumId, group]));
+		for (const album of albums) {
+			const group = byAlbumId.get(album.id);
+			if (!group) continue;
+			result[album.externalId] = {
+				averageRating: roundRating(group._avg.rating),
+				ratingsCount: group._count.albumId,
+			};
+		}
+		res.json({ data: result });
+	});
 
 	router.post("/:id/reviews", authMiddleware, async (req: AuthRequest, res) => {
 		const externalId = readAlbumId(req.params.id);
@@ -144,7 +256,7 @@ export function createAlbumRouter(
 		authMiddleware,
 		async (req: AuthRequest, res) => {
 			const externalId = readAlbumId(req.params.id);
-			const reviewId = readAlbumId(req.params.reviewId);
+			const reviewId = readReviewId(req.params.reviewId);
 			const update = readReviewUpdate(req.body);
 			const review = await prisma.review.findFirst({
 				where: {
@@ -168,6 +280,24 @@ export function createAlbumRouter(
 					albumRating: await getAlbumRating(externalId),
 				},
 			});
+		},
+	);
+
+	// Apaga a própria avaliação (nota e resenha). As curtidas saem junto (onDelete: Cascade).
+	router.delete(
+		"/:id/reviews/:reviewId",
+		authMiddleware,
+		async (req: AuthRequest, res) => {
+			const externalId = readAlbumId(req.params.id);
+			const reviewId = readReviewId(req.params.reviewId);
+			const review = await prisma.review.findFirst({
+				where: { id: reviewId, userId: req.userId!, album: { externalId } },
+				select: { id: true },
+			});
+			if (!review) throw AppError.notFound("Avaliação não encontrada.");
+
+			await prisma.review.delete({ where: { id: review.id } });
+			res.json({ data: { albumRating: await getAlbumRating(externalId) } });
 		},
 	);
 

@@ -10,7 +10,7 @@ interface RootLayoutProps {
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-inter", 
+  variable: "--font-inter",
 });
 
 const poppins = Poppins({
@@ -20,8 +20,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Rewind",
-  description: "Trabalho de Gerência de Projeto de Software",
+  title: { default: "Rewind", template: "%s | Rewind" },
+  description: "Avalie álbuns, escreva resenhas e acompanhe o que seus amigos estão ouvindo.",
 };
 
 export default function RootLayout({ children }: RootLayoutProps) {

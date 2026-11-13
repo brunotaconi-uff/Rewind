@@ -38,7 +38,10 @@ export function GlobalFeed() {
   if (status !== "authenticated") {
     return (
       <EmptyState>
-        <Link href="/login">Entre na sua conta</Link> para ver as novidades de quem você segue.
+        <Link className={styles.searchLink} href="/login?callbackUrl=%2Ffeed">
+          Entre na sua conta
+        </Link>{" "}
+        para ver as novidades de quem você segue.
       </EmptyState>
     );
   }

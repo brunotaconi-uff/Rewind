@@ -78,3 +78,15 @@ export async function searchArtists(query: string, limit?: number): Promise<Arti
   const response = await apiGet<DataResponse<Artist[]>>(withQuery("/artists/search", { q: query, limit }));
   return response.data;
 }
+
+/** Álbum mais avaliado no Rewind, com a média das notas. */
+export interface PopularAlbum extends AlbumSummary {
+  averageRating: number | null;
+  ratingsCount: number;
+}
+
+/** Álbuns mais avaliados pelos usuários do Rewind. */
+export async function getPopularAlbums(limit?: number): Promise<PopularAlbum[]> {
+  const response = await apiGet<DataResponse<PopularAlbum[]>>(withQuery("/albums/popular", { limit }));
+  return response.data;
+}

@@ -40,25 +40,21 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  border-radius: 6px;
 }
 
-.avatar {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  overflow: hidden;
-  border-radius: 50%;
-  background-color: var(--color-input);
+.author:hover .name {
+  text-decoration: underline;
+}
+
+.author:focus-visible {
+  outline: 2px solid var(--color-text-muted);
+  outline-offset: 2px;
+}
+
+.headingCount {
+  font-weight: 400;
   color: var(--color-text-muted);
-}
-
-.avatarImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .name {
@@ -102,5 +98,5 @@
 
 .actions {
   display: flex;
-  margin-left: -10px; 
+  margin-left: -10px;
 }

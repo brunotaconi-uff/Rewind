@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { AlbumCover } from "@/components/AlbumCover/AlbumCover";
@@ -9,8 +9,15 @@ import { Modal } from "@/components/Modal/Modal";
 import { StarInput } from "@/components/StarInput/StarInput";
 import { ApiError, getErrorCode } from "@/lib/api/client";
 import { getErrorMessage } from "@/lib/api/errorMessages";
+import { loginHref } from "@/lib/callbackUrl";
 import type { AlbumSummary } from "@/lib/api/music";
-import { createReview, getMyReview, updateReview } from "@/lib/api/review";
+import {
+	createReview,
+	deleteReview,
+	getMyReview,
+	updateReview,
+	type AlbumRating,
+} from "@/lib/api/review";
 import styles from "./ReviewModal.module.css";
 
 const MAX_CONTENT_LENGTH = 5000;
@@ -20,6 +27,8 @@ interface ReviewModalProps {
 	/** Álbum sendo avaliado; null = modal fechado. */
 	album: AlbumSummary | null;
 	onClose: () => void;
+	/** Média recalculada depois de salvar ou apagar (para atualizar o card). */
+	onRatingChange?: (rating: AlbumRating) => void;
 }
 
 /** Validação e conflito trazem a mensagem do backend; os outros erros usam a mensagem padrão. */
@@ -33,13 +42,22 @@ function reviewErrorMessage(error: unknown): string {
 	return getErrorMessage(getErrorCode(error));
 }
 
-export function ReviewModal({ album, onClose }: ReviewModalProps) {
+export function ReviewModal({
+	album,
+	onClose,
+	onRatingChange,
+}: ReviewModalProps) {
 	return (
-		<Modal open={album !== null} onClose={onClose} title="Review">
+		<Modal open={album !== null} onClose={onClose} title="Sua avaliação">
 			<div className={styles.body}>
 				{/* A key zera o formulário ao trocar de álbum. */}
 				{album && (
-					<ReviewForm key={album.externalId} album={album} onClose={onClose} />
+					<ReviewForm
+						key={album.externalId}
+						album={album}
+						onClose={onClose}
+						onRatingChange={onRatingChange}
+					/>
 				)}
 			</div>
 		</Modal>
@@ -49,11 +67,14 @@ export function ReviewModal({ album, onClose }: ReviewModalProps) {
 function ReviewForm({
 	album,
 	onClose,
+	onRatingChange,
 }: {
 	album: AlbumSummary;
 	onClose: () => void;
+	onRatingChange?: (rating: AlbumRating) => void;
 }) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const { data: session, status } = useSession();
 	const token = session?.accessToken;
 	const errorId = useId();
@@ -64,6 +85,7 @@ function ReviewForm({
 	const [content, setContent] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [confirmingDelete, setConfirmingDelete] = useState(false);
 
 	// 5.4-F4: se o usuário já avaliou o álbum, o modal abre com a nota e a resenha dele.
 	useEffect(() => {
@@ -95,7 +117,11 @@ function ReviewForm({
 		return (
 			<div className={styles.login}>
 				<p>Faça login para avaliar este álbum.</p>
-				<Link href="/login" className={styles.primary} onClick={onClose}>
+				<Link
+					href={loginHref(pathname)}
+					className={styles.primary}
+					onClick={onClose}
+				>
 					Entrar
 				</Link>
 			</div>
@@ -119,15 +145,38 @@ function ReviewForm({
 		setError(null);
 		const input = { rating, content: content.trim() || null };
 		try {
-			if (reviewId)
-				await updateReview(token, album.externalId, reviewId, input);
-			else await createReview(token, album.externalId, input);
+			const saved = reviewId
+				? await updateReview(token, album.externalId, reviewId, input)
+				: await createReview(token, album.externalId, input);
+			onRatingChange?.(saved.albumRating);
 			// Recarrega a página para a média e a lista de resenhas mostrarem a avaliação nova.
 			router.refresh();
 			onClose();
 		} catch (saveError) {
 			setError(reviewErrorMessage(saveError));
 			setSaving(false);
+		}
+	};
+
+	// Excluir pede confirmação no próprio botão (sem diálogo do navegador).
+	const handleDelete = async () => {
+		if (!reviewId) return;
+		if (!confirmingDelete) {
+			setConfirmingDelete(true);
+			return;
+		}
+		setSaving(true);
+		setError(null);
+		try {
+			// Chama a API antes: com onRatingChange ausente, "?.(await …)" nem avaliaria o argumento.
+			const albumRating = await deleteReview(token, album.externalId, reviewId);
+			onRatingChange?.(albumRating);
+			router.refresh();
+			onClose();
+		} catch (deleteError) {
+			setError(reviewErrorMessage(deleteError));
+			setSaving(false);
+			setConfirmingDelete(false);
 		}
 	};
 
@@ -185,6 +234,17 @@ function ReviewForm({
 			)}
 
 			<div className={styles.actions}>
+				{reviewId && (
+					<button
+						type="button"
+						className={styles.danger}
+						onClick={handleDelete}
+						onBlur={() => setConfirmingDelete(false)}
+						disabled={disabled}
+					>
+						{confirmingDelete ? "Confirmar exclusão" : "Excluir avaliação"}
+					</button>
+				)}
 				<button type="button" className={styles.secondary} onClick={onClose}>
 					Cancelar
 				</button>
