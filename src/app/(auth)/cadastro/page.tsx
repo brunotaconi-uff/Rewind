@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { safeCallbackUrl } from "@/lib/callbackUrl";
 import { InputField } from "../../../components/InputField/InputField";
 import { ApiError, apiRequest } from "@/lib/api/client";
 import { getErrorMessage } from "@/lib/api/errorMessages";
@@ -23,8 +24,9 @@ function signupErrorMessage(error: unknown): string {
 	return getErrorMessage("UNKNOWN_ERROR");
 }
 
-const CadastroPage = () => {
+function CadastroForm() {
 	const router = useRouter();
+	const callbackUrl = safeCallbackUrl(useSearchParams().get("callbackUrl"));
 	const [nome, setNome] = useState("");
 	const [username, setUsername] = useState("");
 	const [email, setEmail] = useState("");
@@ -60,7 +62,7 @@ const CadastroPage = () => {
 		try {
 			await apiRequest("/users", {
 				method: "POST",
-				body: { name: nome, username, email, password: senha },
+				body: { name: nome.trim(), username, email: email.trim(), password: senha },
 			});
 		} catch (error) {
 			setErro(signupErrorMessage(error));
@@ -70,19 +72,19 @@ const CadastroPage = () => {
 
 		// Conta criada: já entra, respeitando o "Manter conectado".
 		const result = await signIn("credentials", {
-			email,
+			email: email.trim(),
 			password: senha,
 			rememberMe: String(rememberMe),
 			redirect: false,
-		});
+		}).catch(() => null);
 
-		if (result?.error) {
+		if (!result || result.error) {
 			// A conta existe, mas o login automático falhou: manda para o login manual.
 			router.push("/login");
 			return;
 		}
 
-		router.push("/");
+		router.push(callbackUrl);
 		router.refresh();
 	};
 
@@ -101,6 +103,8 @@ const CadastroPage = () => {
 					placeholder="Digite seu nome"
 					value={nome}
 					onChange={(e) => setNome(e.target.value)}
+					autoComplete="name"
+					autoFocus
 					required
 				/>
 				<InputField
@@ -119,6 +123,7 @@ const CadastroPage = () => {
 					placeholder="seu@email.com"
 					value={email}
 					onChange={(e) => setEmail(e.target.value)}
+					autoComplete="email"
 					required
 				/>
 				<InputField
@@ -140,10 +145,7 @@ const CadastroPage = () => {
 					required
 				/>
 				{erro && (
-					<p
-						role="alert"
-						style={{ color: "red", fontSize: "14px", marginBottom: "16px" }}
-					>
+					<p role="alert" className={styles.error}>
 						{erro}
 					</p>
 				)}
@@ -169,12 +171,26 @@ const CadastroPage = () => {
 			</form>
 			<div className={styles.footer}>
 				<span className={styles.footerText}>Já tem uma conta? </span>
-				<Link href="/login" className={styles.footerLink}>
+				<Link
+					href={
+						callbackUrl === "/"
+							? "/login"
+							: `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`
+					}
+					className={styles.footerLink}
+				>
 					Fazer login
 				</Link>
 			</div>
 		</div>
 	);
-};
+}
 
-export default CadastroPage;
+// useSearchParams precisa de Suspense no build estático do Next.
+export default function CadastroPage() {
+	return (
+		<Suspense>
+			<CadastroForm />
+		</Suspense>
+	);
+}
