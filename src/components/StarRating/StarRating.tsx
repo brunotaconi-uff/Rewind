@@ -17,8 +17,6 @@ export function StarRating({ value, size = 14 }: StarRatingProps) {
 
 	// Arredonda para a meia estrela mais próxima.
 	const rounded = Math.round(Math.min(value, 5) * 2) / 2;
-	const full = Math.floor(rounded);
-	const hasHalf = rounded - full === 0.5;
 
 	return (
 		<span
@@ -26,22 +24,23 @@ export function StarRating({ value, size = 14 }: StarRatingProps) {
 			role="img"
 			aria-label={`Nota média ${rounded.toLocaleString("pt-BR")} de 5`}
 		>
-			{Array.from({ length: full }, (_, index) => (
-				<svg
-					key={index}
-					width={size}
-					height={size}
-					viewBox="0 0 24 24"
-					aria-hidden="true"
-				>
-					<polygon points={STAR} />
-				</svg>
-			))}
-			{hasHalf && (
-				<svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-					<polygon points={LEFT_HALF} />
-				</svg>
-			)}
+			{Array.from({ length: 5 }, (_, index) => {
+				const fill = rounded - index;
+				return (
+					<svg
+						key={index}
+						width={size}
+						height={size}
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
+						{/* Estrela vazia por baixo; a cheia (ou metade) por cima. */}
+						<polygon points={STAR} className={styles.off} />
+						{fill >= 1 && <polygon points={STAR} />}
+						{fill === 0.5 && <polygon points={LEFT_HALF} />}
+					</svg>
+				);
+			})}
 		</span>
 	);
 }
