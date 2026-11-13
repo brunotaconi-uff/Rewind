@@ -168,3 +168,20 @@ export async function deleteReview(
 	return response.data.albumRating;
 }
 
+/** Média e total de avaliações por externalId; álbuns sem avaliação ficam de fora. */
+export type AlbumRatingsMap = Record<
+	string,
+	{ averageRating: number | null; ratingsCount: number }
+>;
+
+/** Médias de vários álbuns de uma vez (até 50), para os cards das listas. */
+export async function getAlbumRatings(
+	externalIds: string[],
+): Promise<AlbumRatingsMap> {
+	const ids = [...new Set(externalIds)].slice(0, 50);
+	if (ids.length === 0) return {};
+	const response = await apiGet<DataResponse<AlbumRatingsMap>>(
+		`/albums/ratings?ids=${ids.map(encodeURIComponent).join(",")}`,
+	);
+	return response.data;
+}
