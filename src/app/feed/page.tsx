@@ -4,7 +4,7 @@ import { Section } from "@/components/Section/Section";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Feed | Rewind",
+  title: "Feed",
 };
 
 export default function FeedPage() {

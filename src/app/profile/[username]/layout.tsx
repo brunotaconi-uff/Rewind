@@ -18,7 +18,7 @@ interface ProfileLayoutProps {
 
 export async function generateMetadata({ params }: Pick<ProfileLayoutProps, "params">): Promise<Metadata> {
   const username = decodeURIComponent((await params).username);
-  return { title: `@${username} | Rewind` };
+  return { title: `@${username}` };
 }
 
 export default async function ProfileLayout({ children, params }: ProfileLayoutProps) {

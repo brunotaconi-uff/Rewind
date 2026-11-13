@@ -26,7 +26,7 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   const params = await searchParams;
   const query = readQuery(params.q);
   const type = readType(params.type);
-  return { title: query ? `Busca: ${query} | Rewind` : type === "users" ? "Buscar pessoas | Rewind" : "Busca | Rewind" };
+  return { title: query ? `Busca: ${query}` : type === "users" ? "Buscar pessoas" : "Busca" };
 }
 
 type Loaded<T> = { data: T; errorCode: null } | { data: null; errorCode: ApiErrorCode };
