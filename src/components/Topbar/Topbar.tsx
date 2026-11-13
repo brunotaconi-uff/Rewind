@@ -13,6 +13,7 @@ import {
 	UsersIcon,
 } from "@/components/icons/icons";
 import { SearchBar } from "@/components/SearchBar/SearchBar";
+import { loginHref } from "@/lib/callbackUrl";
 import styles from "./Topbar.module.css";
 
 interface NavItem {
@@ -60,7 +61,8 @@ function getNavItems(username: string | undefined): NavItem[] {
 
 export function Topbar() {
 	const pathname = usePathname();
-	const { data: session } = useSession();
+	const { data: session, status } = useSession();
+	const loginLink = loginHref(pathname);
 
 	return (
 		<header className={styles.topbar}>
@@ -76,8 +78,14 @@ export function Topbar() {
 			<SearchBar />
 
 			<nav className={styles.nav} aria-label="Navegação principal">
-				{getNavItems(session?.user.username).map(
-					({ href, label, icon: NavIcon, isActive }) => {
+				{getNavItems(session?.user.username)
+					// Sem login, Favoritos e Perfil só levariam ao /login: o botão "Entrar" já faz isso.
+					.filter(
+						({ label }) =>
+							status !== "unauthenticated" ||
+							(label !== "Favoritos" && label !== "Perfil"),
+					)
+					.map(({ href, label, icon: NavIcon, isActive }) => {
 						const active = isActive(pathname);
 						return (
 							<Link
@@ -95,7 +103,13 @@ export function Topbar() {
 								<NavIcon size={20} />
 							</Link>
 						);
-					},
+					})}
+
+				{/* Sem login: um botão claro para entrar, em vez de só ícones que levam ao /login. */}
+				{status === "unauthenticated" && (
+					<Link href={loginLink} className={styles.loginButton}>
+						Entrar
+					</Link>
 				)}
 
 				{session && (

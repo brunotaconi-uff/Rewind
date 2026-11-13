@@ -1,15 +1,16 @@
 import { prisma } from "../lib/prisma";
 
+// Busca pelo nome de usuário ou pelo nome de exibição.
 export const searchUsersService = async (
-  username: string,
+  query: string,
   currentUserId: string
 ) => {
   return prisma.user.findMany({
     where: {
-      username: {
-        contains: username,
-        mode: "insensitive",
-      },
+      OR: [
+        { username: { contains: query, mode: "insensitive" } },
+        { name: { contains: query, mode: "insensitive" } },
+      ],
       NOT: {
         id: currentUserId,
       },

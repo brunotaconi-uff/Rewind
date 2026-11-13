@@ -68,18 +68,6 @@ export function UsersIcon(props: IconProps) {
   );
 }
 
-/** Caixa de álbum com nota musical: "marcar como ouvido". */
-export function ListenedIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M7 3.5h10" />
-      <rect x="3.5" y="6.5" width="17" height="14" rx="3" />
-      <circle cx="10.5" cy="16" r="1.8" />
-      <path d="M12.3 16v-5.5l3.2.8" />
-    </Icon>
-  );
-}
-
 /** Balão com linhas: "fazer review". */
 export function ReviewIcon(props: IconProps) {
   return (

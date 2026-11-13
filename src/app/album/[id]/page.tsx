@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import { AlbumHeader } from "@/components/AlbumHeader/AlbumHeader";
 import { ApiErrorMessage } from "@/components/ApiErrorMessage/ApiErrorMessage";
 import { RatingCard } from "@/components/RatingCard/RatingCard";
 import { ReviewList } from "@/components/ReviewList/ReviewList";
 import { TrackList } from "@/components/TrackList/TrackList";
-import { getErrorCode } from "@/lib/api/client";
+import { notFound } from "next/navigation";
+import { ApiError, getErrorCode } from "@/lib/api/client";
 import { getAlbum, type Album } from "@/lib/api/music";
 import { getAlbumRating, getAlbumReviews } from "@/lib/api/review";
 import { getServerAccessToken } from "@/lib/auth";
@@ -15,6 +18,25 @@ interface AlbumDetailPageProps {
 	}>;
 }
 
+// Metadata e página pedem o mesmo álbum: o cache faz uma chamada só por requisição.
+const loadAlbum = cache((id: string) => getAlbum(id));
+
+export async function generateMetadata({
+	params,
+}: AlbumDetailPageProps): Promise<Metadata> {
+	const { id } = await params;
+	try {
+		const album = await loadAlbum(id);
+		const artists = album.artists.map((artist) => artist.name).join(", ");
+		return {
+			title: artists ? `${album.title} — ${artists}` : album.title,
+			description: `Notas e resenhas de ${album.title} no Rewind.`,
+		};
+	} catch {
+		return { title: "Álbum" };
+	}
+}
+
 const AlbumDetailPage = async ({ params }: AlbumDetailPageProps) => {
 	const { id } = await params;
 
@@ -24,8 +46,9 @@ const AlbumDetailPage = async ({ params }: AlbumDetailPageProps) => {
 
 	let album: Album;
 	try {
-		album = await getAlbum(id);
+		album = await loadAlbum(id);
 	} catch (error) {
+		if (error instanceof ApiError && error.code === "NOT_FOUND") notFound();
 		return (
 			<main className={styles.page}>
 				<div className={styles.container}>

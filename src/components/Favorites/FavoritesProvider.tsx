@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { loginHref } from "@/lib/callbackUrl";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/lib/api/client";
 import type { AlbumSummary } from "@/lib/api/music";
@@ -21,6 +22,7 @@ const FavoritesContext = createContext<FavoritesContextValue | null>(null);
  */
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session } = useSession();
   const username = session?.user.username;
   const token = session?.accessToken;
@@ -63,7 +65,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const toggleFavorite = useCallback(
     async (album: AlbumSummary) => {
       if (!token) {
-        router.push("/login");
+        router.push(loginHref(pathname));
         return false;
       }
 
@@ -76,11 +78,11 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         return true;
       } catch (error) {
         setFavorite(album.externalId, wasFavorite);
-        if (error instanceof ApiError && error.code === "UNAUTHORIZED") router.push("/login");
+        if (error instanceof ApiError && error.code === "UNAUTHORIZED") router.push(loginHref(pathname));
         return false;
       }
     },
-    [token, router, isFavorite, setFavorite],
+    [token, router, pathname, isFavorite, setFavorite],
   );
 
   const value = useMemo(() => ({ isFavorite, toggleFavorite }), [isFavorite, toggleFavorite]);

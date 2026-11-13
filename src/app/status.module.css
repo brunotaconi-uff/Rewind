@@ -1,0 +1,88 @@
+/* Telas de estado da aplicação: 404, erro inesperado e carregamento. */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 480px;
+  margin: 72px auto;
+  padding: 0 24px;
+  text-align: center;
+  color: var(--color-text);
+}
+
+.code {
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-accent);
+}
+
+.title {
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.message {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.primary {
+  background-color: var(--color-text);
+  color: var(--color-surface);
+}
+
+.secondary {
+  background-color: var(--color-input);
+  color: var(--color-text);
+}
+
+.primary:focus-visible,
+.secondary:focus-visible {
+  outline: 2px solid var(--color-text-muted);
+  outline-offset: 2px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-text);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}

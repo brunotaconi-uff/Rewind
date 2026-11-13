@@ -4,6 +4,10 @@
   fill: var(--color-accent);
 }
 
+.off {
+  fill: var(--color-border);
+}
+
 .empty {
   font-size: 11px;
   color: var(--color-text-muted);

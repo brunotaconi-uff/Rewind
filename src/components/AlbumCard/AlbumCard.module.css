@@ -49,6 +49,18 @@
   padding-top: 10px;
 }
 
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
 .year {
   font-size: 12px;
   font-weight: 600;

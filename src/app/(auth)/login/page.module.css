@@ -77,3 +77,11 @@
 .footerLink:hover {
   text-decoration: underline;
 }
+.error {
+	margin-bottom: 16px;
+	padding: 10px 14px;
+	border-radius: 8px;
+	background-color: #fdecec;
+	color: #b4232a;
+	font-size: 14px;
+}

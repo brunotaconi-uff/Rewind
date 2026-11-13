@@ -1,12 +1,10 @@
 import { AppError } from "../errors/AppError";
 import { prisma } from "../lib/prisma";
+import { isUuid } from "../lib/uuid";
 import { isUniqueViolation } from "./album.service";
 
 // 6.3: curtidas nas atividades (notas e resenhas). A tabela ReviewLike tem
 // chave (userId, reviewId), então cada pessoa curte cada atividade uma vez só.
-
-const UUID_PATTERN =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Sem login, o filtro de "curti" usa um id que não é de ninguém
 // (a coluna é uuid, então não dá para usar um texto qualquer).
@@ -41,7 +39,7 @@ export interface LikeSummary {
 }
 
 async function findReviewAuthor(reviewId: string): Promise<string> {
-	const review = UUID_PATTERN.test(reviewId)
+	const review = isUuid(reviewId)
 		? await prisma.review.findUnique({
 				where: { id: reviewId },
 				select: { userId: true },

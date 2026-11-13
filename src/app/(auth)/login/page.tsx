@@ -1,8 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { safeCallbackUrl } from "@/lib/callbackUrl";
 import { InputField } from "../../../components/InputField/InputField";
 import styles from "./page.module.css";
 
@@ -13,8 +14,9 @@ function loginErrorMessage(error: string): string {
 		: "Não foi possível conectar ao servidor. Tente novamente em instantes.";
 }
 
-const LoginPage = () => {
+function LoginForm() {
 	const router = useRouter();
+	const callbackUrl = safeCallbackUrl(useSearchParams().get("callbackUrl"));
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [rememberMe, setRememberMe] = useState(false);
@@ -26,20 +28,25 @@ const LoginPage = () => {
 		setErro("");
 		setEnviando(true);
 
-		const result = await signIn("credentials", {
-			email,
-			password,
-			rememberMe: String(rememberMe),
-			redirect: false,
-		});
+		let result;
+		try {
+			result = await signIn("credentials", {
+				email: email.trim(),
+				password,
+				rememberMe: String(rememberMe),
+				redirect: false,
+			});
+		} catch {
+			result = { error: "NETWORK_ERROR" };
+		}
 
-		if (result?.error) {
-			setErro(loginErrorMessage(result.error));
+		if (!result || result.error) {
+			setErro(loginErrorMessage(result?.error ?? "NETWORK_ERROR"));
 			setEnviando(false);
 			return;
 		}
 
-		router.push("/");
+		router.push(callbackUrl);
 		router.refresh();
 	};
 
@@ -56,6 +63,8 @@ const LoginPage = () => {
 					placeholder="seu@email.com"
 					value={email}
 					onChange={(e) => setEmail(e.target.value)}
+					autoComplete="email"
+					autoFocus
 					required
 				/>
 				<InputField
@@ -64,13 +73,11 @@ const LoginPage = () => {
 					placeholder="..........."
 					value={password}
 					onChange={(e) => setPassword(e.target.value)}
+					autoComplete="current-password"
 					required
 				/>
 				{erro && (
-					<p
-						role="alert"
-						style={{ color: "red", fontSize: "14px", marginBottom: "16px" }}
-					>
+					<p role="alert" className={styles.error}>
 						{erro}
 					</p>
 				)}
@@ -96,12 +103,26 @@ const LoginPage = () => {
 			</form>
 			<div className={styles.footer}>
 				<span className={styles.footerText}>Ainda não tem conta? </span>
-				<Link href="/cadastro" className={styles.footerLink}>
+				<Link
+					href={
+						callbackUrl === "/"
+							? "/cadastro"
+							: `/cadastro?callbackUrl=${encodeURIComponent(callbackUrl)}`
+					}
+					className={styles.footerLink}
+				>
 					Criar conta
 				</Link>
 			</div>
 		</div>
 	);
-};
+}
 
-export default LoginPage;
+// useSearchParams precisa de Suspense no build estático do Next.
+export default function LoginPage() {
+	return (
+		<Suspense>
+			<LoginForm />
+		</Suspense>
+	);
+}

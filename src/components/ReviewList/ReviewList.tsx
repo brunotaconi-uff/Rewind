@@ -1,4 +1,5 @@
-import { UserIcon } from "@/components/icons/icons";
+import Link from "next/link";
+import { Avatar } from "@/components/Avatar/Avatar";
 import { LikeButton } from "@/components/LikeButton/LikeButton";
 import { StarRating } from "@/components/StarRating/StarRating";
 import type { AlbumReview } from "@/lib/api/review";
@@ -14,6 +15,9 @@ export function ReviewList({ reviews }: ReviewListProps) {
 		<section className={styles.section} aria-labelledby="resenhas">
 			<h2 id="resenhas" className={styles.heading}>
 				Resenhas
+				{reviews && reviews.length > 0 && (
+					<span className={styles.headingCount}> ({reviews.length})</span>
+				)}
 			</h2>
 
 			{reviews === null ? (
@@ -21,30 +25,29 @@ export function ReviewList({ reviews }: ReviewListProps) {
 					Não foi possível carregar as resenhas no momento.
 				</p>
 			) : reviews.length === 0 ? (
-				<p className={styles.empty}>Ainda não há resenhas para este álbum.</p>
+				<p className={styles.empty}>
+					Ainda não há resenhas para este álbum. Que tal escrever a primeira?
+				</p>
 			) : (
 				<ul className={styles.list}>
 					{reviews.map((review) => (
 						<li key={review.id} className={styles.card}>
 							<div className={styles.header}>
-								<div className={styles.author}>
-									<span className={styles.avatar}>
-										{review.user.avatarUrl ? (
-											// eslint-disable-next-line @next/next/no-img-element -- avatar pode vir de qualquer domínio
-											<img
-												src={review.user.avatarUrl}
-												alt=""
-												className={styles.avatarImage}
-											/>
-										) : (
-											<UserIcon size={16} />
-										)}
-									</span>
+								{/* O autor leva ao perfil dele. */}
+								<Link
+									href={`/profile/${encodeURIComponent(review.user.username)}`}
+									className={styles.author}
+								>
+									<Avatar
+										src={review.user.avatarUrl}
+										name={review.user.name}
+										size={28}
+									/>
 									<span className={styles.name}>{review.user.name}</span>
 									<span className={styles.username}>
 										@{review.user.username}
 									</span>
-								</div>
+								</Link>
 
 								<div className={styles.meta}>
 									<StarRating value={review.rating} />
