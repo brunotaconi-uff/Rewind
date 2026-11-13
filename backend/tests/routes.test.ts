@@ -746,6 +746,41 @@ describe("GET /albums/:id/rating", () => {
   });
 });
 
+describe("DELETE /albums/:id/reviews/:reviewId", () => {
+  const del = (reviewId = REVIEW_ID) =>
+    api(`/albums/${EXTERNAL_ALBUM}/reviews/${reviewId}`, { method: "DELETE", token: tokenFor() });
+
+  test("401 sem login", async () => {
+    const res = await api(`/albums/${EXTERNAL_ALBUM}/reviews/${REVIEW_ID}`, { method: "DELETE" });
+    assert.equal(res.status, 401);
+  });
+
+  test("404 para id fora do formato uuid, sem consultar o banco", async () => {
+    stub(prisma.review, "findFirst", async () => { throw new Error("não deveria consultar"); });
+    assert.equal((await del("abc")).status, 404);
+  });
+
+  test("404 quando a avaliação é de outro usuário", async () => {
+    let where: any;
+    stub(prisma.review, "findFirst", async (args: any) => { where = args.where; return null; });
+    assert.equal((await del()).status, 404);
+    assert.deepEqual(where, { id: REVIEW_ID, userId: USER_ID, album: { externalId: EXTERNAL_ALBUM } });
+  });
+
+  test("200 apaga e devolve a média atualizada", async () => {
+    let deleted: any;
+    stub(prisma.review, "findFirst", async () => ({ id: REVIEW_ID }));
+    stub(prisma.review, "delete", async (args: any) => { deleted = args.where; return {}; });
+    stubAlbumRating();
+
+    const res = await del();
+
+    assert.equal(res.status, 200);
+    assert.deepEqual(deleted, { id: REVIEW_ID });
+    assert.deepEqual(res.json.data.albumRating, { albumId: EXTERNAL_ALBUM, averageRating: null, ratingsCount: 0 });
+  });
+});
+
 describe("seguir com id inválido", () => {
   test("404 em vez de 500 quando o id não é uuid", async () => {
     stub(prisma.user, "findUnique", async () => { throw new Error("não deveria consultar"); });

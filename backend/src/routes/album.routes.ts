@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { AppError } from "../errors/AppError";
 import { prisma } from "../lib/prisma";
+import { isUuid } from "../lib/uuid";
 import {
 	authMiddleware,
 	AuthRequest,
@@ -14,6 +15,11 @@ import type { MusicProvider } from "../services/music/music.types";
 function readAlbumId(value: unknown): string {
 	if (typeof value !== "string" || !value)
 		throw AppError.validation("ID de álbum inválido.");
+	return value;
+}
+
+function readReviewId(value: unknown): string {
+	if (!isUuid(value)) throw AppError.notFound("Avaliação não encontrada.");
 	return value;
 }
 
@@ -144,7 +150,7 @@ export function createAlbumRouter(
 		authMiddleware,
 		async (req: AuthRequest, res) => {
 			const externalId = readAlbumId(req.params.id);
-			const reviewId = readAlbumId(req.params.reviewId);
+			const reviewId = readReviewId(req.params.reviewId);
 			const update = readReviewUpdate(req.body);
 			const review = await prisma.review.findFirst({
 				where: {
@@ -168,6 +174,24 @@ export function createAlbumRouter(
 					albumRating: await getAlbumRating(externalId),
 				},
 			});
+		},
+	);
+
+	// Apaga a própria avaliação (nota e resenha). As curtidas saem junto (onDelete: Cascade).
+	router.delete(
+		"/:id/reviews/:reviewId",
+		authMiddleware,
+		async (req: AuthRequest, res) => {
+			const externalId = readAlbumId(req.params.id);
+			const reviewId = readReviewId(req.params.reviewId);
+			const review = await prisma.review.findFirst({
+				where: { id: reviewId, userId: req.userId!, album: { externalId } },
+				select: { id: true },
+			});
+			if (!review) throw AppError.notFound("Avaliação não encontrada.");
+
+			await prisma.review.delete({ where: { id: review.id } });
+			res.json({ data: { albumRating: await getAlbumRating(externalId) } });
 		},
 	);
 
