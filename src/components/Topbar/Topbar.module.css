@@ -47,6 +47,31 @@
   color: var(--color-text);
 }
 
+.navButton:focus-visible,
+.loginButton:focus-visible,
+.brand:focus-visible {
+  outline: 2px solid var(--color-text-muted);
+  outline-offset: 2px;
+}
+
+.loginButton {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 20px;
+  background-color: var(--color-text);
+  color: var(--color-surface);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+
+.loginButton:hover {
+  opacity: 0.85;
+}
+
 @media (max-width: 768px) {
   .topbar {
     grid-template-columns: auto 1fr auto;
@@ -65,5 +90,10 @@
   .navButton {
     width: 36px;
     height: 36px;
+  }
+
+  .loginButton {
+    height: 36px;
+    padding: 0 12px;
   }
 }
